@@ -1,0 +1,1177 @@
+[
+  {
+    "name": "CM (Community Management)",
+    "ticketTypes": [
+      {
+        "name": "Security escalation",
+        "defaultWD": 5,
+        "description": "Lack of security - safety"
+      },
+      {
+        "name": "Security Issues",
+        "defaultWD": 5,
+        "description": "Access permission"
+      },
+      {
+        "name": "Secuirty escalation",
+        "defaultWD": 5,
+        "description": "security hazard"
+      },
+      {
+        "name": "CM SLA",
+        "defaultWD": 5,
+        "description": "FM SLA"
+      },
+      {
+        "name": "8WD_Comp_1WD_Milestone_2HReview",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "6WD_Comp_1WD_Milestone_2HReview",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "2WD_Comp_1WD_Milestone_2HReview",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Call Center Automatic Replies (Client to send his request on Cm@Imkan.eg)",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "10WD_Comp_1WD_Milestone_2HReview",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "1 WD",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "9WD_Comp_1WD_Milestone_2HReview",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "7WD_Comp_1WD_Milestone_2HReview",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "7WD_Comp_2WD_Milestone_2HReview",
+        "defaultWD": 5,
+        "description": "7WD_Comp_1WD_Milestone_2HReview"
+      }
+    ]
+  },
+  {
+    "name": "Collection",
+    "ticketTypes": [
+      {
+        "name": "General Inquiry",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Postpone Installement",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Rescheduling",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Request Type",
+        "defaultWD": 5,
+        "description": "Sub type"
+      },
+      {
+        "name": "Incoming Payments",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Delay Penalty / Financial Status",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Handover / Early HO",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Delay Penalty Waiver",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Cash discount",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Update Info",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Cheque recall",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Receiving recalled cheques",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Postpone 10% Installement",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Cheque Replacement",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Milestones",
+        "defaultWD": 5,
+        "description": "Department"
+      },
+      {
+        "name": "First contact",
+        "defaultWD": 5,
+        "description": "Collection"
+      },
+      {
+        "name": "Client Notification",
+        "defaultWD": 5,
+        "description": "Collection"
+      },
+      {
+        "name": "payment settlement",
+        "defaultWD": 5,
+        "description": "Finance"
+      },
+      {
+        "name": "Financial Status/ Penalty sheet",
+        "defaultWD": 5,
+        "description": "Finance"
+      },
+      {
+        "name": "Management Approval",
+        "defaultWD": 5,
+        "description": "Management"
+      },
+      {
+        "name": "Discount Scenario",
+        "defaultWD": 5,
+        "description": "Business Development"
+      },
+      {
+        "name": "New Cheques Submission",
+        "defaultWD": 5,
+        "description": "Client"
+      },
+      {
+        "name": "(we need a pop up to open this or not according to the case )",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Department",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Recalling Cheques",
+        "defaultWD": 5,
+        "description": "Finance"
+      },
+      {
+        "name": "No milestone",
+        "defaultWD": 5,
+        "description": "Collection"
+      },
+      {
+        "name": "Rescheduling Scenario",
+        "defaultWD": 5,
+        "description": "Finance"
+      },
+      {
+        "name": "Client Confirmation",
+        "defaultWD": 5,
+        "description": "Client"
+      },
+      {
+        "name": "Receipt Issuance",
+        "defaultWD": 5,
+        "description": "Finance"
+      }
+    ]
+  },
+  {
+    "name": "Contracts",
+    "ticketTypes": [
+      {
+        "name": "Contract Signing",
+        "defaultWD": 5,
+        "description": "Units contracts signing"
+      },
+      {
+        "name": "Club membership contract signing",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Contract Delivery",
+        "defaultWD": 5,
+        "description": "Club membership contract delivery"
+      },
+      {
+        "name": "Units contracts delivery",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Transfers documents delivery",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Inquiry",
+        "defaultWD": 5,
+        "description": "Sales centre Address to deliver"
+      },
+      {
+        "name": "Club Membership Inquires",
+        "defaultWD": 5,
+        "description": "Club membership inquires to subscribe."
+      },
+      {
+        "name": "Contract Delay",
+        "defaultWD": 5,
+        "description": "Unit contract delivery delay"
+      },
+      {
+        "name": "Transfer Docs delivery delay",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Transfer signing contract delay",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Membership club contract delay",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Request Types",
+        "defaultWD": 5,
+        "description": "Priorty"
+      },
+      {
+        "name": "Signing unit contract",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Overseas Contract",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Contract Modifications",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "signing unit contrct after transfer",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Unit contract",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Club contract",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Transfer docs",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Multiple Delivery Inquiries",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "pending unit contract",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "pending club contract",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Pending Transfer Docs",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Address to sign and deliver",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Unit and club",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Club details Info",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Subscription Appointment",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Delay Receiving contract",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Handover Visit",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Handover Visit Date",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Receiving Keys Date",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Snag List",
+        "defaultWD": 5,
+        "description": "Medium"
+      },
+      {
+        "name": "Keys Delivery (Final Clearance)",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Keys Delivery (Intial Check)",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Early Handover",
+        "defaultWD": 5,
+        "description": "Low"
+      },
+      {
+        "name": "Delay Snags",
+        "defaultWD": 5,
+        "description": "High"
+      },
+      {
+        "name": "Delay Financial Status",
+        "defaultWD": 5,
+        "description": ""
+      }
+    ]
+  },
+  {
+    "name": "HO (Handover)",
+    "ticketTypes": [
+      {
+        "name": "Setting an appointment",
+        "defaultWD": 5,
+        "description": "recieveing keys"
+      },
+      {
+        "name": "Rescheduling",
+        "defaultWD": 5,
+        "description": "handover visit date"
+      },
+      {
+        "name": "Handover Inquiries",
+        "defaultWD": 5,
+        "description": "Early handover"
+      },
+      {
+        "name": "Old Sheet",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "AR Milestone",
+        "defaultWD": 5,
+        "description": "Main Ticket Types"
+      },
+      {
+        "name": "Follow up",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "10 WD",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Handover Inquires",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Complaint",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Notes",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Keys Delivery (Intial Check)",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Keys Delivery (Final Clearance)",
+        "defaultWD": 5,
+        "description": ""
+      }
+    ]
+  },
+  {
+    "name": "Resale & Rental",
+    "ticketTypes": [
+      {
+        "name": "Security escalation",
+        "defaultWD": 5,
+        "description": "Lack of security - safety"
+      },
+      {
+        "name": "Security Issues",
+        "defaultWD": 5,
+        "description": "Access permission"
+      },
+      {
+        "name": "Secuirty escalation",
+        "defaultWD": 5,
+        "description": "security hazard"
+      },
+      {
+        "name": "Request Types",
+        "defaultWD": 5,
+        "description": "SLA"
+      },
+      {
+        "name": "Exisiting client selling unit",
+        "defaultWD": 5,
+        "description": "1 Working Day"
+      },
+      {
+        "name": "Existing client renting unit",
+        "defaultWD": 5,
+        "description": "1 Working Day"
+      }
+    ]
+  },
+  {
+    "name": "Security",
+    "ticketTypes": [
+      {
+        "name": "Security issues",
+        "defaultWD": 5,
+        "description": "Lack of security - safety"
+      },
+      {
+        "name": "Access permission",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "security hazard",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Sub-Types",
+        "defaultWD": 5,
+        "description": "PRIORITY"
+      },
+      {
+        "name": "Request",
+        "defaultWD": 5,
+        "description": "Meduim"
+      },
+      {
+        "name": "Complaint",
+        "defaultWD": 5,
+        "description": "Meduim"
+      },
+      {
+        "name": "Enquiry",
+        "defaultWD": 5,
+        "description": "Meduim"
+      }
+    ]
+  },
+  {
+    "name": "Sports",
+    "ticketTypes": [
+      {
+        "name": "Club",
+        "defaultWD": 5,
+        "description": "Membership process"
+      },
+      {
+        "name": "Gym",
+        "defaultWD": 5,
+        "description": "Operation"
+      },
+      {
+        "name": "Request Types",
+        "defaultWD": 5,
+        "description": "SLA"
+      },
+      {
+        "name": "Membership process",
+        "defaultWD": 5,
+        "description": "6 WD"
+      },
+      {
+        "name": "ID Cards receival",
+        "defaultWD": 5,
+        "description": "1 WD"
+      },
+      {
+        "name": "Manchester City Academy",
+        "defaultWD": 5,
+        "description": "1 WD"
+      },
+      {
+        "name": "Padel",
+        "defaultWD": 5,
+        "description": "1 WD"
+      },
+      {
+        "name": "Facility and club access",
+        "defaultWD": 5,
+        "description": "1 WD"
+      },
+      {
+        "name": "Gym operation",
+        "defaultWD": 5,
+        "description": "1 WD"
+      }
+    ]
+  },
+  {
+    "name": "TCR",
+    "ticketTypes": [
+      {
+        "name": "WORK PERMIT",
+        "defaultWD": 1,
+        "description": "Shutters"
+      },
+      {
+        "name": "Masonry Works",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Gas Boiler",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Paintings / Gypsum Board",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Demolishing Works",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Solar Panels",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Carpentry/ Wooden Cladding",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Penthouse Planter",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Solar Heater",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Flooring Tiles",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Roof Jacuzzi",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Core Opening",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Electricity Works",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Penthouse Roof Separator",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Garden Jacuzzi",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Plumbing Works",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Hardscape Seatings/ Bar",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Rain Shade",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Car Charger",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Cameras",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Kitchen / Furn / AC Installation",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Storage Unit",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Water Features",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Garden Separator",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Roof Pergola",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Garden Pergola",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Car Canopy",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Garden Natural Grass",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Garden Hardscape Walkway",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Hedge Plant/ Boundary",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Garden Planter/ Bar",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Artificial Grass",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Garden Electricity Works",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "Pool Borehole Test",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Pool Excavation",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Pool Flooring RFT Mesh/ Pipes",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Pool Walls RFT Mesh/ Pipes",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Pool Isolation",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Pool Finishing",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Multiple Works",
+        "defaultWD": 2,
+        "description": ""
+      },
+      {
+        "name": "SITE VISIT",
+        "defaultWD": 2,
+        "description": "Site visit"
+      },
+      {
+        "name": "INSPECTION \"CHEQUE REFUND\"",
+        "defaultWD": 3,
+        "description": ""
+      },
+      {
+        "name": "TECHNICAL INQUIRY",
+        "defaultWD": 3,
+        "description": "Construction Updates"
+      },
+      {
+        "name": "Work Permit Inquiry",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "Materials Codes",
+        "defaultWD": 3,
+        "description": ""
+      },
+      {
+        "name": "Asbuilt Drawings",
+        "defaultWD": 3,
+        "description": ""
+      },
+      {
+        "name": "PAID SERVICE",
+        "defaultWD": 1,
+        "description": "Landscape"
+      },
+      {
+        "name": "Pergola",
+        "defaultWD": 1,
+        "description": ""
+      },
+      {
+        "name": "LICENSE",
+        "defaultWD": 1,
+        "description": "Swimming Pool"
+      },
+      {
+        "name": "Elevator",
+        "defaultWD": 1,
+        "description": ""
+      }
+    ]
+  },
+  {
+    "name": "Customer Care",
+    "ticketTypes": [
+      {
+        "name": "1. Cancellation",
+        "defaultWD": 5,
+        "description": "URF cancellation"
+      },
+      {
+        "name": "SPA Cancellation",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Club cancellation",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "2. Cancel and Transfer",
+        "defaultWD": 5,
+        "description": "Cancel and Transfer"
+      },
+      {
+        "name": "3. CYC",
+        "defaultWD": 5,
+        "description": "CYC"
+      },
+      {
+        "name": "4. Cheques Replacement",
+        "defaultWD": 5,
+        "description": "Cheques Replacement"
+      },
+      {
+        "name": "5. Clearance",
+        "defaultWD": 5,
+        "description": "Clearance"
+      },
+      {
+        "name": "6. DDP",
+        "defaultWD": 5,
+        "description": "DDP (Milestone Changed)"
+      },
+      {
+        "name": "7. Delay Penalty Waiver",
+        "defaultWD": 5,
+        "description": "Delay Penalty Waiver"
+      },
+      {
+        "name": "8. Postponing Cheques",
+        "defaultWD": 5,
+        "description": "Postpone Installment (Milestone Changed)"
+      },
+      {
+        "name": "Postpone 10% Installment",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "9. Transfer of Ownership",
+        "defaultWD": 5,
+        "description": "Third Party"
+      },
+      {
+        "name": "1st Degree Transfer",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Adding Joint Buyer",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Delete Joint Buyer",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Replacing Joint Owner",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Mortgage",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Inheritance",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Resale",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Club Membership Transfer",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "10. Update info",
+        "defaultWD": 5,
+        "description": "Email/ Telephone"
+      },
+      {
+        "name": "Address",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "11. General Info",
+        "defaultWD": 5,
+        "description": "General inforamtion"
+      },
+      {
+        "name": "12. Recalling Cheques",
+        "defaultWD": 5,
+        "description": "Recalling Cheques"
+      },
+      {
+        "name": "13. Refund Cheques",
+        "defaultWD": 5,
+        "description": "Refund Cheques"
+      },
+      {
+        "name": "14. Delivery Date",
+        "defaultWD": 5,
+        "description": "Delivery Date"
+      },
+      {
+        "name": "15, Apology Letter",
+        "defaultWD": 5,
+        "description": "Apology Letter"
+      },
+      {
+        "name": "16. Post Dated Cheques",
+        "defaultWD": 5,
+        "description": "PDCs"
+      },
+      {
+        "name": "PDC's post handover",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "17. Complaints",
+        "defaultWD": 5,
+        "description": "Complain"
+      },
+      {
+        "name": "Internal department complain",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "18. Others",
+        "defaultWD": 5,
+        "description": "Others"
+      },
+      {
+        "name": "19. Rescheduling (On Hold)",
+        "defaultWD": 5,
+        "description": "Rescheduling"
+      },
+      {
+        "name": "20. Cashback (On Hold)",
+        "defaultWD": 5,
+        "description": "Cashback"
+      },
+      {
+        "name": "21. Downgrade (On Hold)",
+        "defaultWD": 5,
+        "description": "Downgrade"
+      },
+      {
+        "name": "22. Early HO (On Hold)",
+        "defaultWD": 5,
+        "description": "Early HO"
+      },
+      {
+        "name": "23. Modifications Insurance cheque",
+        "defaultWD": 5,
+        "description": "Receiving Modifications Insurance cheque"
+      },
+      {
+        "name": "Refundung Modifications Insurance cheque",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Additonal Change",
+        "defaultWD": 5,
+        "description": "Financial Status/ Penalty sheet"
+      }
+    ]
+  },
+  {
+    "name": "FM (Facilities Management)",
+    "ticketTypes": [
+      {
+        "name": "FM Related",
+        "defaultWD": 5,
+        "description": "to be left blank only for FM"
+      },
+      {
+        "name": "Service Category",
+        "defaultWD": 5,
+        "description": "Incident Category"
+      },
+      {
+        "name": "1- Maintenance Works",
+        "defaultWD": 5,
+        "description": "Plumbing"
+      },
+      {
+        "name": "Electricity",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Carpentry",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Aluminum",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "PC/ Pest control",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "2-Installation Works",
+        "defaultWD": 5,
+        "description": "Aluminum Works"
+      },
+      {
+        "name": "Irrigation Paid Service",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "PC Paid Service",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Electrical Works",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Carpentry Works",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Plumbing Works",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "A/C Works",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Ceramic / Marble Works",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Painting Works",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "HK Paid Service",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Landscape Paid Service",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "3-Inquries",
+        "defaultWD": 5,
+        "description": "Civil Inquriy"
+      },
+      {
+        "name": "MEP Inquiry",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "HK services Inquiry",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Landscape Inquiry",
+        "defaultWD": 5,
+        "description": ""
+      },
+      {
+        "name": "Pest Control Services Inquiry",
+        "defaultWD": 5,
+        "description": ""
+      }
+    ]
+  }
+]
