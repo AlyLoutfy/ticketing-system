@@ -30,11 +30,14 @@ export default function TicketHistoryComponent({ ticketId }: TicketHistoryProps)
     }
   };
 
-  const formatValue = (value: string | number | Date | null | undefined): string => {
+  const formatValue = (value: string | number | Date | { value: number; unit: "hours" | "days" } | null | undefined): string => {
     if (value === null || value === undefined) return "Not set";
     if (typeof value === "string") return value;
     if (typeof value === "number") return value.toString();
     if (value instanceof Date) return formatDateTime(value);
+    if (typeof value === "object" && "value" in value && "unit" in value) {
+      return `${value.value}${value.unit === "hours" ? "h" : "WD"}`;
+    }
     return String(value);
   };
 

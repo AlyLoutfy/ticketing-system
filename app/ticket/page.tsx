@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { storage, Ticket, Department } from "@/lib/storage";
 import { parseSLA, calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
 import { SLADisplay } from "@/components/ui/sla-display";
-import { formatDateTime, getPriorityColor, getStatusColor, isOverdue, getDaysUntilDue, calculateDueDate, formatDate } from "@/lib/utils/date-calculator";
+import { formatDateTime, getPriorityColor, getStatusColor, isOverdue, getDaysUntilDue, formatDate } from "@/lib/utils/date-calculator";
 import { ArrowLeft, Edit, Calendar, AlertTriangle, User as UserIcon, Building, Clock, Save } from "lucide-react";
 import Link from "next/link";
 import TicketHistoryComponent from "@/components/TicketHistory";

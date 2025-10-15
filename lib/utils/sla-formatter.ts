@@ -39,7 +39,7 @@ export function calculateDueDate(sla: SLA, startDate: Date = new Date()): Date {
   } else {
     // For days, we need to calculate working days
     let workingDaysAdded = 0;
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
 
     while (workingDaysAdded < sla.value) {
       currentDate.setDate(currentDate.getDate() + 1);

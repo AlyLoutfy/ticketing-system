@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { storage, Department, TicketType, Workflow } from "@/lib/storage";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { parseSLA } from "@/lib/utils/sla-formatter";
-import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowRight, GripVertical, ArrowLeft } from "lucide-react";
+import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 // Predefined sub-categories
@@ -78,10 +78,6 @@ export default function AdminPage() {
     if (!workflowId) return "Default";
     const workflow = workflows.find((w) => w.id === workflowId);
     return workflow ? workflow.name : "Unknown";
-  };
-
-  const getDefaultWorkflow = () => {
-    return workflows.find((w) => w.isDefault);
   };
 
   // Department CRUD functions
@@ -585,7 +581,7 @@ export default function AdminPage() {
                                     <Plus className="w-12 h-12 mx-auto" />
                                   </div>
                                   <p className="text-gray-600 font-medium">No ticket types yet</p>
-                                  <p className="text-sm text-gray-500">Click "Add Ticket Type" to create your first one</p>
+                                  <p className="text-sm text-gray-500">Click &quot;Add Ticket Type&quot; to create your first one</p>
                                 </div>
                               )}
                             </div>
@@ -651,7 +647,7 @@ export default function AdminPage() {
                                     <Edit className="w-12 h-12 mx-auto" />
                                   </div>
                                   <p className="text-gray-600 font-medium">No ticket types yet</p>
-                                  <p className="text-sm text-gray-500">Click "Edit Ticket Types" to add some</p>
+                                  <p className="text-sm text-gray-500">Click &quot;Edit Ticket Types&quot; to add some</p>
                                 </div>
                               </div>
                             )}

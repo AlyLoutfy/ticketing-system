@@ -1,19 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { storage, Ticket, Department } from "@/lib/storage";
 import { formatDate, isOverdue, getPriorityColor, getStatusColor, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
-import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, Search, ChevronLeft, ChevronRight, X, Calendar, Trash2, Edit2, Check, Eye, Edit } from "lucide-react";
+import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Trash2, Check, Eye, Edit } from "lucide-react";
 import Link from "next/link";
 
 // Helper function to check if text is truncated
@@ -58,13 +56,8 @@ export default function Home() {
   } | null>(null);
 
   // Inline editing state
-  const [editingTicket, setEditingTicket] = useState<string | null>(null);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
 
   // Calendar state for push due date
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
 
   // Ticket modal state
   const [showTicketModal, setShowTicketModal] = useState(false);
@@ -184,39 +177,6 @@ export default function Home() {
     }, 100);
   };
 
-  const handleInlineEdit = (ticketId: string, field: string, currentValue: string) => {
-    setEditingTicket(ticketId);
-    setEditingField(field);
-    setEditValue(currentValue);
-  };
-
-  const handleInlineSave = async () => {
-    if (!editingTicket || !editingField) return;
-
-    try {
-      const updates: Partial<Ticket> = {};
-      updates[editingField as keyof Ticket] = editValue as any;
-
-      await storage.updateTicket(editingTicket, updates);
-
-      // Refresh tickets
-      const updatedTickets = await storage.getTickets();
-      setTickets(updatedTickets);
-
-      setEditingTicket(null);
-      setEditingField(null);
-      setEditValue("");
-    } catch (error) {
-      console.error("Error updating ticket:", error);
-    }
-  };
-
-  const handleInlineCancel = () => {
-    setEditingTicket(null);
-    setEditingField(null);
-    setEditValue("");
-  };
-
   const handleDeleteTicket = async (ticketId: string) => {
     try {
       await storage.deleteTicket(ticketId);
@@ -259,46 +219,6 @@ export default function Home() {
     }
     setSelectedTickets(newSelection);
     setShowBulkActions(newSelection.size > 0);
-  };
-
-  const handleSelectAll = (selected: boolean) => {
-    if (selected) {
-      const allIds = new Set(filteredTickets.map((ticket) => ticket.id));
-      setSelectedTickets(allIds);
-    } else {
-      setSelectedTickets(new Set());
-    }
-    setShowBulkActions(selected);
-  };
-
-  const handlePushDueDate = async (ticketId: string, days: number) => {
-    try {
-      const ticket = await storage.getTicket(ticketId);
-      if (!ticket) return;
-
-      const newDueDate = new Date(ticket.dueDate);
-      newDueDate.setDate(newDueDate.getDate() + days);
-
-      await storage.updateTicket(ticketId, { dueDate: newDueDate });
-
-      const updatedTickets = await storage.getTickets();
-      setTickets(updatedTickets);
-    } catch (error) {
-      console.error("Error pushing due date:", error);
-    }
-  };
-
-  const handleSetCustomDueDate = async (ticketId: string, date: Date) => {
-    try {
-      await storage.updateTicket(ticketId, { dueDate: date });
-
-      const updatedTickets = await storage.getTickets();
-      setTickets(updatedTickets);
-      setShowCalendar(false);
-      setSelectedDate("");
-    } catch (error) {
-      console.error("Error setting custom due date:", error);
-    }
   };
 
   const getStatusCount = (status: string) => {

@@ -86,8 +86,8 @@ export interface TicketHistory {
   ticketId: string;
   changes: {
     field: string;
-    oldValue: string | number | Date | null | undefined;
-    newValue: string | number | Date | null | undefined;
+    oldValue: string | number | Date | { value: number; unit: "hours" | "days" } | null | undefined;
+    newValue: string | number | Date | { value: number; unit: "hours" | "days" } | null | undefined;
   }[];
   changedBy?: string;
   changedAt: Date;
@@ -229,7 +229,7 @@ class IndexedDBStorage {
       const request = store.add(newDept);
 
       request.onsuccess = () => resolve(newDept);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
@@ -244,24 +244,26 @@ class IndexedDBStorage {
       const request = store.getAll();
 
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async getDepartment(id: string): Promise<Department | null> {
     const db = this.ensureDB();
+    if (!db) return null;
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["departments"], "readonly");
       const store = transaction.objectStore("departments");
       const request = store.get(id);
 
       request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async updateDepartment(id: string, updates: Partial<Department>): Promise<Department> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const existing = await this.getDepartment(id);
     if (!existing) {
       throw new Error("Department not found");
@@ -279,25 +281,27 @@ class IndexedDBStorage {
       const request = store.put(updated);
 
       request.onsuccess = () => resolve(updated);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async deleteDepartment(id: string): Promise<void> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["departments"], "readwrite");
       const store = transaction.objectStore("departments");
       const request = store.delete(id);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   // Ticket Type operations
   async createTicketType(departmentId: string, ticketType: Omit<TicketType, "id" | "createdAt" | "updatedAt">): Promise<TicketType> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const department = await this.getDepartment(departmentId);
     if (!department) {
       throw new Error("Department not found");
@@ -323,12 +327,13 @@ class IndexedDBStorage {
       const request = store.put(updatedDepartment);
 
       request.onsuccess = () => resolve(newTicketType);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async updateTicketType(departmentId: string, ticketTypeId: string, updates: Partial<TicketType>): Promise<TicketType> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const department = await this.getDepartment(departmentId);
     if (!department) {
       throw new Error("Department not found");
@@ -357,12 +362,13 @@ class IndexedDBStorage {
       const request = store.put(updatedDepartment);
 
       request.onsuccess = () => resolve(updatedTicketType);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async deleteTicketType(departmentId: string, ticketTypeId: string): Promise<void> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const department = await this.getDepartment(departmentId);
     if (!department) {
       throw new Error("Department not found");
@@ -380,13 +386,14 @@ class IndexedDBStorage {
       const request = store.put(updatedDepartment);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   // Ticket operations
   async createTicket(ticket: Omit<Ticket, "id" | "createdAt" | "updatedAt" | "dueDate">): Promise<Ticket> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const now = new Date();
     const dueDate = this.calculateDueDate(now, ticket.workingDays);
 
@@ -404,7 +411,7 @@ class IndexedDBStorage {
       const request = store.add(newTicket);
 
       request.onsuccess = () => resolve(newTicket);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
@@ -470,24 +477,26 @@ class IndexedDBStorage {
         tickets.sort((a: Ticket, b: Ticket) => b.createdAt.getTime() - a.createdAt.getTime());
         resolve(tickets);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async getTicket(id: string): Promise<Ticket | null> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["tickets"], "readonly");
       const store = transaction.objectStore("tickets");
       const request = store.get(id);
 
       request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async updateTicket(id: string, updates: Partial<Ticket>): Promise<Ticket> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const existing = await this.getTicket(id);
     if (!existing) {
       console.error("Ticket not found:", id);
@@ -495,14 +504,14 @@ class IndexedDBStorage {
     }
 
     // Track changes for history
-    const changes: { field: string; oldValue: string | number | Date | null | undefined; newValue: string | number | Date | null | undefined }[] = [];
+    const changes: { field: string; oldValue: string | number | Date | { value: number; unit: "hours" | "days" } | null | undefined; newValue: string | number | Date | { value: number; unit: "hours" | "days" } | null | undefined }[] = [];
     Object.keys(updates).forEach((key) => {
       const field = key as keyof Ticket;
       if (updates[field] !== undefined && existing[field] !== updates[field]) {
         changes.push({
           field,
-          oldValue: existing[field],
-          newValue: updates[field],
+          oldValue: existing[field] as string | number | Date | { value: number; unit: "hours" | "days" } | null | undefined,
+          newValue: updates[field] as string | number | Date | { value: number; unit: "hours" | "days" } | null | undefined,
         });
       }
     });
@@ -549,19 +558,22 @@ class IndexedDBStorage {
 
   async deleteTicket(id: string): Promise<void> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["tickets"], "readwrite");
       const store = transaction.objectStore("tickets");
       const request = store.delete(id);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   // Ticket history operations
   async getTicketHistory(ticketId: string): Promise<TicketHistory[]> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["ticketHistory"], "readonly");
       const store = transaction.objectStore("ticketHistory");
@@ -574,12 +586,14 @@ class IndexedDBStorage {
         history.sort((a: TicketHistory, b: TicketHistory) => b.changedAt.getTime() - a.changedAt.getTime());
         resolve(history);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async getAllTicketHistory(): Promise<TicketHistory[]> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["ticketHistory"], "readonly");
       const store = transaction.objectStore("ticketHistory");
@@ -591,7 +605,7 @@ class IndexedDBStorage {
         history.sort((a: TicketHistory, b: TicketHistory) => b.changedAt.getTime() - a.changedAt.getTime());
         resolve(history);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
@@ -802,6 +816,7 @@ class IndexedDBStorage {
   // Clear all data (for testing)
   async clearAll(): Promise<void> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["departments", "tickets", "ticketHistory", "workflows", "workflowResolutions"], "readwrite");
 
@@ -819,6 +834,7 @@ class IndexedDBStorage {
   // Workflow Management
   async createWorkflow(workflow: Omit<Workflow, "id" | "createdAt" | "updatedAt">): Promise<Workflow> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const now = new Date();
     const newWorkflow: Workflow = {
       ...workflow,
@@ -833,7 +849,7 @@ class IndexedDBStorage {
       const request = store.add(newWorkflow);
 
       request.onsuccess = () => resolve(newWorkflow);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
@@ -848,37 +864,43 @@ class IndexedDBStorage {
       const request = store.getAll();
 
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async getWorkflow(id: string): Promise<Workflow | null> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["workflows"], "readonly");
       const store = transaction.objectStore("workflows");
       const request = store.get(id);
 
       request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async getDefaultWorkflow(): Promise<Workflow | null> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["workflows"], "readonly");
       const store = transaction.objectStore("workflows");
-      const index = store.index("isDefault");
-      const request = index.get(true);
+      const request = store.getAll();
 
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const workflows = request.result || [];
+        const defaultWorkflow = workflows.find((w: Workflow) => w.isDefault);
+        resolve(defaultWorkflow || null);
+      };
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async updateWorkflow(id: string, updates: Partial<Workflow>): Promise<Workflow> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const existing = await this.getWorkflow(id);
     if (!existing) {
       throw new Error("Workflow not found");
@@ -896,25 +918,27 @@ class IndexedDBStorage {
       const request = store.put(updated);
 
       request.onsuccess = () => resolve(updated);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async deleteWorkflow(id: string): Promise<void> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["workflows"], "readwrite");
       const store = transaction.objectStore("workflows");
       const request = store.delete(id);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   // Workflow Resolution Management
   async createWorkflowResolution(resolution: Omit<WorkflowResolution, "id" | "resolvedAt">): Promise<WorkflowResolution> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
     const now = new Date();
     const newResolution: WorkflowResolution = {
       ...resolution,
@@ -928,12 +952,15 @@ class IndexedDBStorage {
       const request = store.add(newResolution);
 
       request.onsuccess = () => resolve(newResolution);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 
   async getWorkflowResolutions(ticketId: string): Promise<WorkflowResolution[]> {
     const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+    if (!db) throw new Error("Database not available");
+    if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["workflowResolutions"], "readonly");
       const store = transaction.objectStore("workflowResolutions");
@@ -946,7 +973,7 @@ class IndexedDBStorage {
         resolutions.sort((a: WorkflowResolution, b: WorkflowResolution) => b.resolvedAt.getTime() - a.resolvedAt.getTime());
         resolve(resolutions);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(request.error!);
     });
   }
 

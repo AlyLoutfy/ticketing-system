@@ -67,7 +67,6 @@ export function Toast({ id, title, description, type, duration = 5000, onClose }
 }
 
 // Global toast state
-let globalToasts: ToastProps[] = [];
 let globalSetToasts: React.Dispatch<React.SetStateAction<ToastProps[]>> | null = null;
 
 export function showToast(title: string, type: "success" | "error" | "warning" | "info", description?: string) {
@@ -84,9 +83,8 @@ export function ToastContainer() {
 
   // Set global state
   useEffect(() => {
-    globalToasts = toasts;
     globalSetToasts = setToasts;
-  }, [toasts]);
+  }, []);
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));

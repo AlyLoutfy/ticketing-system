@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { storage, Department } from "@/lib/storage";
 import { formatDate, getPriorityColor } from "@/lib/utils/date-calculator";
-import { formatSLA, parseSLA, calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
-import { ArrowLeft, Save, Calendar, Ticket, User as UserIcon } from "lucide-react";
+import { parseSLA, calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
+import { ArrowLeft, Save, Calendar, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

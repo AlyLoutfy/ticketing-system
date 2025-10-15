@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { storage, Department, Workflow, WorkflowStep } from "@/lib/storage";
-import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowRight, GripVertical, ArrowLeft, Check, X, Star, StarOff } from "lucide-react";
+import { Plus, Ticket, Edit, Trash2, Save, GripVertical, ArrowLeft, Star, StarOff } from "lucide-react";
 import Link from "next/link";
 import { ToastContainer, showToast } from "@/components/ui/toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
@@ -20,7 +20,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 // Sortable Step Card Component
-function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { step: WorkflowStep; index: number; onUpdate: (index: number, field: keyof WorkflowStep, value: any) => void; onRemove: (index: number) => void; departments: Department[] }) {
+function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { step: WorkflowStep; index: number; onUpdate: (index: number, field: keyof WorkflowStep, value: string | number | boolean) => void; onRemove: (index: number) => void; departments: Department[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id });
 
   const style = {
@@ -85,7 +85,7 @@ function DepartmentCard({ department, onAddStep }: { department: Department; onA
   );
 }
 
-export default function WorkflowsPage() {
+function WorkflowsPageContent() {
   const searchParams = useSearchParams();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -174,7 +174,7 @@ export default function WorkflowsPage() {
     setWorkflowSteps([...workflowSteps, newStep]);
   };
 
-  const updateWorkflowStep = (index: number, field: keyof WorkflowStep, value: any) => {
+  const updateWorkflowStep = (index: number, field: keyof WorkflowStep, value: string | number | boolean) => {
     const updatedSteps = [...workflowSteps];
     updatedSteps[index] = { ...updatedSteps[index], [field]: value };
     setWorkflowSteps(updatedSteps);
@@ -506,5 +506,21 @@ export default function WorkflowsPage() {
 
       <ToastContainer />
     </div>
+  );
+}
+
+export default function WorkflowsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-gray-600">Loading workflows...</div>
+          </div>
+        </div>
+      }
+    >
+      <WorkflowsPageContent />
+    </Suspense>
   );
 }
