@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { storage, Ticket, Department } from "@/lib/storage";
+import { parseSLA, calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
+import { SLADisplay } from "@/components/ui/sla-display";
 import { formatDateTime, getPriorityColor, getStatusColor, isOverdue, getDaysUntilDue, calculateDueDate, formatDate } from "@/lib/utils/date-calculator";
-import { ArrowLeft, Edit, Calendar, AlertTriangle, User, Building, Clock, Save } from "lucide-react";
+import { ArrowLeft, Edit, Calendar, AlertTriangle, User as UserIcon, Building, Clock, Save } from "lucide-react";
 import Link from "next/link";
 import TicketHistoryComponent from "@/components/TicketHistory";
 
@@ -28,48 +30,24 @@ function TicketPageContent() {
 
   const [formData, setFormData] = useState({
     department: "",
+    subCategory: "",
     ticketType: "",
     clientName: "",
-    workingDays: 5,
-    priority: "Medium" as "Low" | "Medium" | "High" | "Critical",
-    status: "Open" as "Open" | "In Progress" | "Resolved" | "Rejected",
+    unitId: "",
+    status: "Open" as "Open" | "In Progress" | "Resolved" | "Rejected" | "Overdue",
     description: "",
   });
 
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [estimatedDueDate, setEstimatedDueDate] = useState<Date | null>(null);
-
-  useEffect(() => {
-    if (ticketId) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, [ticketId]);
-
-  useEffect(() => {
-    // Calculate due date when working days change
-    if (formData.workingDays > 0 && ticket) {
-      const dueDate = calculateDueDate(ticket.createdAt, formData.workingDays);
-      setEstimatedDueDate(dueDate);
-    }
-  }, [formData.workingDays, ticket]);
-
-  useEffect(() => {
-    // Update working days when ticket type changes
-    if (selectedDepartment && formData.ticketType) {
-      const ticketType = selectedDepartment.ticketTypes.find((t) => t.name === formData.ticketType);
-      if (ticketType) {
-        setFormData((prev) => ({ ...prev, workingDays: ticketType.defaultWD }));
-      }
-    }
-  }, [formData.ticketType, selectedDepartment]);
+  const [mounted, setMounted] = useState(false);
 
   const loadData = async () => {
     if (!ticketId) return;
 
     try {
       await storage.init();
+
       const [ticketData, departmentsData] = await Promise.all([storage.getTicket(ticketId), storage.getDepartments()]);
 
       if (!ticketData) {
@@ -84,13 +62,16 @@ function TicketPageContent() {
       const department = departmentsData.find((d) => d.name === ticketData.department);
       setSelectedDepartment(department || null);
 
-      // Set form data
+      // Find the ticket type to get sub-category
+      const ticketType = department?.ticketTypes.find((t) => t.name === ticketData.ticketType);
+
+      // Set form data with pre-populated values
       setFormData({
         department: department?.name || "",
-        ticketType: ticketData.ticketType,
+        subCategory: ticketData.subCategory || ticketType?.subCategory || "",
+        ticketType: ticketType?.id || "",
         clientName: ticketData.clientName,
-        workingDays: ticketData.workingDays,
-        priority: ticketData.priority,
+        unitId: ticketData.unitId || "",
         status: ticketData.status,
         description: ticketData.description || "",
       });
@@ -101,13 +82,54 @@ function TicketPageContent() {
     }
   };
 
+  useEffect(() => {
+    setMounted(true);
+    if (ticketId) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [ticketId]);
+
+  useEffect(() => {
+    // Calculate due date when ticket type changes
+    if (selectedDepartment && formData.ticketType && mounted) {
+      const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
+      if (ticketType) {
+        const sla = typeof ticketType.sla === "object" ? ticketType.sla : parseSLA(ticketType.sla);
+        const dueDate = calculateSLADueDate(sla, new Date());
+        setEstimatedDueDate(dueDate);
+      }
+    }
+  }, [formData.ticketType, selectedDepartment, mounted]);
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   const handleDepartmentChange = (departmentName: string) => {
     const department = departments.find((d) => d.name === departmentName);
     setSelectedDepartment(department || null);
     setFormData((prev) => ({
       ...prev,
       department: departmentName,
+      subCategory: "", // Reset sub-category when department changes
       ticketType: "", // Reset ticket type when department changes
+    }));
+  };
+
+  const handleSubCategoryChange = (subCategory: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      subCategory,
+      ticketType: "", // Reset ticket type when sub-category changes
     }));
   };
 
@@ -122,12 +144,18 @@ function TicketPageContent() {
     try {
       setSubmitting(true);
 
+      const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
+      if (!ticketType) return;
+
       const updates: Partial<Ticket> = {
         department: selectedDepartment.name,
-        ticketType: formData.ticketType,
+        ticketType: ticketType.name,
+        subCategory: ticketType.subCategory,
+        sla: ticketType.sla,
         clientName: formData.clientName.trim(),
-        workingDays: formData.workingDays,
-        priority: formData.priority,
+        unitId: formData.unitId.trim() || undefined,
+        workingDays: typeof ticketType.sla === "object" && ticketType.sla?.unit === "days" ? ticketType.sla.value : ticketType.defaultWD,
+        priority: ticketType.priority,
         status: formData.status,
         description: formData.description.trim() || undefined,
       };
@@ -181,7 +209,7 @@ function TicketPageContent() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" size="sm" onClick={() => router.push(`/ticket?id=${ticketId}&mode=view`)}>
+          <Button variant="outline" size="sm" onClick={() => router.push(`/ticket?id=${ticketId}&mode=view`)} className="cursor-pointer">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Ticket
           </Button>
@@ -201,7 +229,7 @@ function TicketPageContent() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
+                    <div className="space-y-3">
                       <Label htmlFor="department">Department *</Label>
                       <Select value={formData.department} onValueChange={handleDepartmentChange}>
                         <SelectTrigger>
@@ -217,66 +245,74 @@ function TicketPageContent() {
                       </Select>
                     </div>
 
-                    <div>
-                      <Label htmlFor="ticketType">Ticket Type *</Label>
-                      <Select value={formData.ticketType} onValueChange={(value) => setFormData((prev) => ({ ...prev, ticketType: value }))} disabled={!selectedDepartment}>
+                    <div className="space-y-3">
+                      <Label htmlFor="subCategory">Sub-Category *</Label>
+                      <Select value={formData.subCategory} onValueChange={handleSubCategoryChange} disabled={!selectedDepartment}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select ticket type" />
+                          <SelectValue placeholder="Select sub-category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {selectedDepartment?.ticketTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.name}>
-                              {type.name} ({type.defaultWD} WD)
-                            </SelectItem>
-                          ))}
+                          {selectedDepartment &&
+                            (() => {
+                              const subCategories = [...new Set(selectedDepartment.ticketTypes.map((type) => type.subCategory || "General"))];
+                              return subCategories.map((subCategory) => (
+                                <SelectItem key={subCategory} value={subCategory}>
+                                  {subCategory}
+                                </SelectItem>
+                              ));
+                            })()}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="clientName">Client Name *</Label>
-                    <Input id="clientName" value={formData.clientName} onChange={(e) => setFormData((prev) => ({ ...prev, clientName: e.target.value }))} placeholder="Enter client name" required />
+                  <div className="space-y-3">
+                    <Label htmlFor="ticketType">Ticket Type *</Label>
+                    <Select value={formData.ticketType} onValueChange={(value) => setFormData((prev) => ({ ...prev, ticketType: value }))} disabled={!formData.subCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select ticket type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedDepartment &&
+                          formData.subCategory &&
+                          selectedDepartment.ticketTypes
+                            .filter((type) => (type.subCategory || "General") === formData.subCategory)
+                            .map((type) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                {type.name} ({type.defaultWD} WD)
+                              </SelectItem>
+                            ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="workingDays">Working Days (WD) *</Label>
-                      <Input id="workingDays" type="number" min="1" value={formData.workingDays} onChange={(e) => setFormData((prev) => ({ ...prev, workingDays: parseInt(e.target.value) || 1 }))} required />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="clientName">Client Name *</Label>
+                      <Input id="clientName" value={formData.clientName} onChange={(e) => setFormData((prev) => ({ ...prev, clientName: e.target.value }))} placeholder="Enter client name" required />
                     </div>
-
-                    <div>
-                      <Label htmlFor="priority">Priority *</Label>
-                      <Select value={formData.priority} onValueChange={(value: "Low" | "Medium" | "High" | "Critical") => setFormData((prev) => ({ ...prev, priority: value }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Low">Low</SelectItem>
-                          <SelectItem value="Medium">Medium</SelectItem>
-                          <SelectItem value="High">High</SelectItem>
-                          <SelectItem value="Critical">Critical</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="status">Status *</Label>
-                      <Select value={formData.status} onValueChange={(value: "Open" | "In Progress" | "Resolved" | "Rejected") => setFormData((prev) => ({ ...prev, status: value }))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Open">Open</SelectItem>
-                          <SelectItem value="In Progress">In Progress</SelectItem>
-                          <SelectItem value="Resolved">Resolved</SelectItem>
-                          <SelectItem value="Rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-3">
+                      <Label htmlFor="unitId">Unit ID</Label>
+                      <Input id="unitId" value={formData.unitId} onChange={(e) => setFormData((prev) => ({ ...prev, unitId: e.target.value }))} placeholder="Enter unit ID (optional)" />
                     </div>
                   </div>
 
-                  <div>
+                  <div className="space-y-3">
+                    <Label htmlFor="status">Status *</Label>
+                    <Select value={formData.status} onValueChange={(value: "Open" | "In Progress" | "Resolved" | "Rejected") => setFormData((prev) => ({ ...prev, status: value }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Resolved">Resolved</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
                     <Label htmlFor="description">Description</Label>
                     <Textarea id="description" value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} placeholder="Optional description or notes" rows={4} />
                   </div>
@@ -295,7 +331,7 @@ function TicketPageContent() {
                         </>
                       )}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => router.push(`/ticket?id=${ticketId}&mode=view`)}>
+                    <Button type="button" variant="outline" onClick={() => router.push(`/ticket?id=${ticketId}&mode=view`)} className="cursor-pointer">
                       Cancel
                     </Button>
                   </div>
@@ -315,25 +351,60 @@ function TicketPageContent() {
                   <p className="text-sm">{selectedDepartment?.name || "Not selected"}</p>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Ticket Type</Label>
-                  <p className="text-sm">{formData.ticketType || "Not selected"}</p>
-                </div>
+                {formData.subCategory && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Sub-Category</Label>
+                    <p className="text-sm">{formData.subCategory}</p>
+                  </div>
+                )}
+
+                {selectedDepartment && formData.ticketType && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Ticket Type</Label>
+                    <p className="text-sm">{selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.name || "Not selected"}</p>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Client</Label>
                   <p className="text-sm">{formData.clientName || "Not entered"}</p>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Working Days</Label>
-                  <p className="text-sm">{formData.workingDays} WD</p>
-                </div>
+                {formData.unitId && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Unit ID</Label>
+                    <p className="text-sm">{formData.unitId}</p>
+                  </div>
+                )}
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Priority</Label>
-                  <p className="text-sm">{formData.priority}</p>
-                </div>
+                {selectedDepartment && formData.ticketType && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">SLA</Label>
+                    <p className="text-sm">
+                      {(() => {
+                        const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
+                        if (ticketType) {
+                          return <SLADisplay sla={ticketType.sla} />;
+                        }
+                        return "N/A";
+                      })()}
+                    </p>
+                  </div>
+                )}
+
+                {selectedDepartment && formData.ticketType && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Default WD</Label>
+                    <SLADisplay sla={selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.sla} />
+                  </div>
+                )}
+
+                {selectedDepartment && formData.ticketType && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Priority</Label>
+                    <p className="text-sm">{selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority}</p>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Status</Label>
@@ -345,7 +416,9 @@ function TicketPageContent() {
                     <Label className="text-sm font-medium text-gray-600">Updated Due Date</Label>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-500" />
-                      <p className="text-sm font-medium">{formatDate(estimatedDueDate)}</p>
+                      <p className="text-sm font-medium" suppressHydrationWarning>
+                        {formatDate(estimatedDueDate)}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -362,7 +435,7 @@ function TicketPageContent() {
     <div className="container mx-auto p-6">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="cursor-pointer">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
@@ -378,9 +451,11 @@ function TicketPageContent() {
               </Badge>
             )}
           </div>
-          <p className="text-gray-600">Created on {formatDateTime(ticket.createdAt)}</p>
+          <p className="text-gray-600" suppressHydrationWarning>
+            Created on {formatDateTime(ticket.createdAt)}
+          </p>
         </div>
-        <Button onClick={() => router.push(`/ticket?id=${ticketId}&mode=edit`)}>
+        <Button onClick={() => router.push(`/ticket?id=${ticketId}&mode=edit`)} className="cursor-pointer">
           <Edit className="w-4 h-4 mr-2" />
           Edit Ticket
         </Button>
@@ -414,19 +489,55 @@ function TicketPageContent() {
                     </div>
                   </div>
 
+                  {ticket.subCategory && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Sub-Category</p>
+                        <p className="font-medium">{ticket.subCategory}</p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-3">
-                    <User className="w-5 h-5 text-gray-500" />
+                    <UserIcon className="w-5 h-5 text-gray-500" />
                     <div>
                       <p className="text-sm text-gray-600">Client</p>
                       <p className="font-medium">{ticket.clientName}</p>
                     </div>
                   </div>
 
+                  {ticket.unitId && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Unit ID</p>
+                        <p className="font-medium">{ticket.unitId}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {ticket.sla && (
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-gray-500" />
+                      <div>
+                        <p className="text-sm text-gray-600">Default WD</p>
+                        <SLADisplay sla={ticket.sla} />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-3">
                     <Clock className="w-5 h-5 text-gray-500" />
                     <div>
-                      <p className="text-sm text-gray-600">Working Days</p>
-                      <p className="font-medium">{ticket.workingDays} WD</p>
+                      <p className="text-sm text-gray-600">SLA</p>
+                      <p className="font-medium">
+                        <SLADisplay sla={ticket.sla} />
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -474,7 +585,9 @@ function TicketPageContent() {
                   <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                   <div>
                     <p className="text-sm font-medium">Ticket Created</p>
-                    <p className="text-xs text-gray-600">{formatDateTime(ticket.createdAt)}</p>
+                    <p className="text-xs text-gray-600" suppressHydrationWarning>
+                      {formatDateTime(ticket.createdAt)}
+                    </p>
                   </div>
                 </div>
 
@@ -483,7 +596,9 @@ function TicketPageContent() {
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                     <div>
                       <p className="text-sm font-medium">Last Updated</p>
-                      <p className="text-xs text-gray-600">{formatDateTime(ticket.updatedAt)}</p>
+                      <p className="text-xs text-gray-600" suppressHydrationWarning>
+                        {formatDateTime(ticket.updatedAt)}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -500,7 +615,9 @@ function TicketPageContent() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className={`text-2xl font-bold mb-2 ${overdue ? "text-red-600" : "text-gray-900"}`}>{formatDateTime(ticket.dueDate)}</div>
+                  <div className={`text-2xl font-bold mb-2 ${overdue ? "text-red-600" : "text-gray-900"}`} suppressHydrationWarning>
+                    {formatDateTime(ticket.dueDate)}
+                  </div>
                   {overdue ? (
                     <Badge variant="destructive">
                       <AlertTriangle className="w-3 h-3 mr-1" />
@@ -523,7 +640,7 @@ function TicketPageContent() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full" onClick={() => router.push(`/ticket?id=${ticketId}&mode=edit`)}>
+                <Button variant="outline" className="w-full cursor-pointer" onClick={() => router.push(`/ticket?id=${ticketId}&mode=edit`)}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Ticket
                 </Button>

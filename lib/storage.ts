@@ -14,6 +14,13 @@ export interface TicketType {
   name: string;
   defaultWD: number;
   description?: string;
+  subCategory?: string;
+  sla: {
+    value: number;
+    unit: "hours" | "days";
+  };
+  priority: string;
+  workflowId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,14 +29,56 @@ export interface Ticket {
   id: string;
   department: string;
   ticketType: string;
+  subCategory?: string;
+  sla?: {
+    value: number;
+    unit: "hours" | "days";
+  };
   clientName: string;
+  unitId?: string;
   workingDays: number;
-  priority: "Low" | "Medium" | "High" | "Critical";
-  status: "Open" | "In Progress" | "Resolved" | "Rejected";
+  priority: string;
+  status: "Open" | "In Progress" | "Resolved" | "Rejected" | "Overdue";
   description?: string;
+  ticketOwner: string;
+  currentWorkflowStep?: number;
+  workflowId?: string;
   createdAt: Date;
   updatedAt: Date;
   dueDate: Date;
+}
+
+export interface WorkflowStep {
+  id: string;
+  departmentId: string;
+  departmentName: string;
+  stepNumber: number;
+  isRequired: boolean;
+  estimatedDays?: number;
+  slaUnit?: "hours" | "days";
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description?: string;
+  steps: WorkflowStep[];
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface WorkflowResolution {
+  id: string;
+  ticketId: string;
+  stepNumber: number;
+  fromDepartment: string;
+  toDepartment?: string;
+  resolvedBy: string;
+  resolutionText: string;
+  attachments?: string[];
+  resolvedAt: Date;
+  isFinalResolution: boolean;
 }
 
 export interface TicketHistory {
@@ -48,60 +97,114 @@ export interface TicketHistory {
 class IndexedDBStorage {
   private db: IDBDatabase | null = null;
   private dbName = "TicketingSystem";
-  private version = 2;
+  private version = 4;
+  private idCounter = 0;
+  private isInitialized = false;
+  private initPromise: Promise<void> | null = null;
 
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    if (this.isInitialized) {
+      return Promise.resolve();
+    }
+
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = new Promise((resolve, reject) => {
+      // Check if we're in a browser environment
+      if (typeof window === "undefined" || !window.indexedDB) {
+        console.log("IndexedDB not available, using fallback");
+        this.isInitialized = true;
+        resolve();
+        return;
+      }
+
+      console.log("Opening IndexedDB:", this.dbName, "version:", this.version);
+
+      // Add timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        console.error("IndexedDB initialization timeout, using fallback");
+        this.isInitialized = true;
+        resolve();
+      }, 3000);
+
       const request = indexedDB.open(this.dbName, this.version);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        clearTimeout(timeout);
+        console.error("IndexedDB error:", request.error);
+        this.isInitialized = true;
+        resolve(); // Don't reject, just continue without IndexedDB
+      };
+
       request.onsuccess = () => {
+        clearTimeout(timeout);
+        console.log("IndexedDB opened successfully");
         this.db = request.result;
-        console.log("Database initialized successfully");
-        console.log("Object stores:", Array.from(this.db.objectStoreNames));
+        this.isInitialized = true;
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
+        console.log("IndexedDB upgrade needed");
         const db = (event.target as IDBOpenDBRequest).result;
-        console.log("Database upgrade needed, creating object stores");
 
-        // Delete existing stores if they exist (for clean upgrade)
-        if (db.objectStoreNames.contains("departments")) {
-          db.deleteObjectStore("departments");
+        try {
+          // Delete existing stores if they exist (for clean upgrade)
+          if (db.objectStoreNames.contains("departments")) {
+            db.deleteObjectStore("departments");
+          }
+          if (db.objectStoreNames.contains("tickets")) {
+            db.deleteObjectStore("tickets");
+          }
+          if (db.objectStoreNames.contains("ticketHistory")) {
+            db.deleteObjectStore("ticketHistory");
+          }
+
+          // Create departments store
+          const deptStore = db.createObjectStore("departments", { keyPath: "id" });
+          deptStore.createIndex("name", "name", { unique: true });
+
+          // Create tickets store
+          const ticketStore = db.createObjectStore("tickets", { keyPath: "id" });
+          ticketStore.createIndex("department", "department");
+          ticketStore.createIndex("status", "status");
+          ticketStore.createIndex("priority", "priority");
+          ticketStore.createIndex("createdAt", "createdAt");
+          ticketStore.createIndex("dueDate", "dueDate");
+
+          // Create ticket history store
+          const historyStore = db.createObjectStore("ticketHistory", { keyPath: "id" });
+          historyStore.createIndex("ticketId", "ticketId");
+          historyStore.createIndex("changedAt", "changedAt");
+
+          // Create workflows store
+          const workflowStore = db.createObjectStore("workflows", { keyPath: "id" });
+          workflowStore.createIndex("name", "name");
+          workflowStore.createIndex("isDefault", "isDefault");
+
+          // Create workflow resolutions store
+          const resolutionStore = db.createObjectStore("workflowResolutions", { keyPath: "id" });
+          resolutionStore.createIndex("ticketId", "ticketId");
+          resolutionStore.createIndex("resolvedAt", "resolvedAt");
+
+          console.log("Object stores created successfully");
+        } catch (error) {
+          console.error("Error during upgrade:", error);
+          this.isInitialized = true;
+          resolve(); // Don't reject, just continue without IndexedDB
         }
-        if (db.objectStoreNames.contains("tickets")) {
-          db.deleteObjectStore("tickets");
-        }
-        if (db.objectStoreNames.contains("ticketHistory")) {
-          db.deleteObjectStore("ticketHistory");
-        }
-
-        // Create departments store
-        const deptStore = db.createObjectStore("departments", { keyPath: "id" });
-        deptStore.createIndex("name", "name", { unique: true });
-
-        // Create tickets store
-        const ticketStore = db.createObjectStore("tickets", { keyPath: "id" });
-        ticketStore.createIndex("department", "department");
-        ticketStore.createIndex("status", "status");
-        ticketStore.createIndex("priority", "priority");
-        ticketStore.createIndex("createdAt", "createdAt");
-        ticketStore.createIndex("dueDate", "dueDate");
-
-        // Create ticket history store
-        const historyStore = db.createObjectStore("ticketHistory", { keyPath: "id" });
-        historyStore.createIndex("ticketId", "ticketId");
-        historyStore.createIndex("changedAt", "changedAt");
-
-        console.log("Object stores created successfully");
       };
     });
+
+    return this.initPromise;
   }
 
-  private ensureDB(): IDBDatabase {
+  private ensureDB(): IDBDatabase | null {
     if (!this.db) {
-      throw new Error("Database not initialized. Call init() first.");
+      console.log("IndexedDB not available, returning null");
+      return null;
     }
     return this.db;
   }
@@ -109,6 +212,9 @@ class IndexedDBStorage {
   // Department operations
   async createDepartment(department: Omit<Department, "id" | "createdAt" | "updatedAt">): Promise<Department> {
     const db = this.ensureDB();
+    if (!db) {
+      throw new Error("IndexedDB not available");
+    }
     const now = new Date();
     const newDept: Department = {
       ...department,
@@ -129,6 +235,9 @@ class IndexedDBStorage {
 
   async getDepartments(): Promise<Department[]> {
     const db = this.ensureDB();
+    if (!db) {
+      return [];
+    }
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["departments"], "readonly");
       const store = transaction.objectStore("departments");
@@ -301,13 +410,44 @@ class IndexedDBStorage {
 
   async getTickets(filters?: { department?: string; status?: string; priority?: string; search?: string }): Promise<Ticket[]> {
     const db = this.ensureDB();
+    if (!db) {
+      return [];
+    }
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(["tickets"], "readonly");
+      const transaction = db.transaction(["tickets"], "readwrite");
       const store = transaction.objectStore("tickets");
       const request = store.getAll();
 
-      request.onsuccess = () => {
+      request.onsuccess = async () => {
         let tickets = request.result;
+
+        // Update tickets to "Overdue" status if they're past due date
+        const now = new Date();
+        const ticketsToUpdate: Ticket[] = [];
+
+        for (const ticket of tickets) {
+          if (ticket.dueDate < now && ticket.status !== "Resolved" && ticket.status !== "Rejected" && ticket.status !== "Overdue") {
+            const updatedTicket = { ...ticket, status: "Overdue" as const, updatedAt: now };
+            ticketsToUpdate.push(updatedTicket);
+          }
+        }
+
+        // Update tickets that need status change
+        if (ticketsToUpdate.length > 0) {
+          for (const ticket of ticketsToUpdate) {
+            await new Promise<void>((resolveUpdate, rejectUpdate) => {
+              const updateRequest = store.put(ticket);
+              updateRequest.onsuccess = () => resolveUpdate();
+              updateRequest.onerror = () => rejectUpdate(updateRequest.error);
+            });
+          }
+
+          // Update the tickets array with the new statuses
+          tickets = tickets.map((ticket) => {
+            const updated = ticketsToUpdate.find((ut) => ut.id === ticket.id);
+            return updated || ticket;
+          });
+        }
 
         // Apply filters
         if (filters) {
@@ -347,16 +487,12 @@ class IndexedDBStorage {
   }
 
   async updateTicket(id: string, updates: Partial<Ticket>): Promise<Ticket> {
-    console.log("updateTicket called with:", { id, updates });
-
     const db = this.ensureDB();
     const existing = await this.getTicket(id);
     if (!existing) {
       console.error("Ticket not found:", id);
       throw new Error("Ticket not found");
     }
-
-    console.log("Existing ticket:", existing);
 
     // Track changes for history
     const changes: { field: string; oldValue: string | number | Date | null | undefined; newValue: string | number | Date | null | undefined }[] = [];
@@ -382,8 +518,6 @@ class IndexedDBStorage {
       updated.dueDate = this.calculateDueDate(updated.createdAt, updated.workingDays);
     }
 
-    console.log("Updated ticket:", updated);
-
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["tickets", "ticketHistory"], "readwrite");
       const ticketStore = transaction.objectStore("tickets");
@@ -393,7 +527,6 @@ class IndexedDBStorage {
       const ticketRequest = ticketStore.put(updated);
 
       ticketRequest.onsuccess = () => {
-        console.log("Ticket updated successfully in database");
         // Add history entry if there are changes
         if (changes.length > 0) {
           const historyEntry: TicketHistory = {
@@ -403,7 +536,6 @@ class IndexedDBStorage {
             changedAt: new Date(),
           };
           historyStore.add(historyEntry);
-          console.log("History entry added:", historyEntry);
         }
         resolve(updated);
       };
@@ -465,7 +597,9 @@ class IndexedDBStorage {
 
   // Utility methods
   private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    // Use a deterministic counter to avoid hydration mismatch
+    this.idCounter += 1;
+    return `id_${this.idCounter}`;
   }
 
   private calculateDueDate(startDate: Date, workingDays: number): Date {
@@ -484,43 +618,56 @@ class IndexedDBStorage {
   }
 
   // Seed data from JSON
-  async seedDepartments(departmentsData: { name: string; ticketTypes: { name: string; defaultWD: number; description?: string }[] }[]): Promise<void> {
+  async seedDepartments(departmentsData: { name: string; ticketTypes: { name: string; defaultWD: number; description?: string; subCategory?: string; sla: string; priority: string }[] }[]): Promise<void> {
     const existingDepartments = await this.getDepartments();
     if (existingDepartments.length > 0) {
-      console.log("Departments already exist, skipping seed");
       return;
     }
 
     for (const deptData of departmentsData) {
-      const ticketTypes: TicketType[] = deptData.ticketTypes.map((type: { name: string; defaultWD: number; description?: string }) => ({
-        id: this.generateId(),
-        name: type.name,
-        defaultWD: type.defaultWD,
-        description: type.description || "",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+      const ticketTypes: TicketType[] = deptData.ticketTypes.map((type: { name: string; defaultWD: number; description?: string; subCategory?: string; sla: string; priority: string }) => {
+        // Convert old SLA string format to new object format
+        let sla: { value: number; unit: "hours" | "days" };
+        if (type.sla.includes("h")) {
+          const value = parseInt(type.sla.replace("h", ""));
+          sla = { value: isNaN(value) ? 5 : value, unit: "hours" };
+        } else if (type.sla.includes("WD") || type.sla.includes("Working Days")) {
+          const value = parseInt(type.sla.replace("WD", "").replace("Working Days", "").trim());
+          sla = { value: isNaN(value) ? 5 : value, unit: "days" };
+        } else {
+          // Default fallback
+          sla = { value: 5, unit: "days" };
+        }
+
+        return {
+          id: this.generateId(),
+          name: type.name,
+          defaultWD: type.defaultWD,
+          description: type.description || "",
+          subCategory: type.subCategory || "",
+          sla: sla,
+          priority: type.priority,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      });
 
       await this.createDepartment({
         name: deptData.name,
         ticketTypes,
       });
     }
-
-    console.log(`Seeded ${departmentsData.length} departments`);
   }
 
   // Seed sample tickets for demonstration
   async seedSampleTickets(): Promise<void> {
     const existingTickets = await this.getTickets();
     if (existingTickets.length > 0) {
-      console.log("Tickets already exist, skipping sample seed");
       return;
     }
 
     const departments = await this.getDepartments();
     if (departments.length === 0) {
-      console.log("No departments found, cannot seed sample tickets");
       return;
     }
 
@@ -529,6 +676,7 @@ class IndexedDBStorage {
         department: "Collection",
         ticketType: "Postpone Installement",
         clientName: "Ahmed Mohamed",
+        ticketOwner: "Front Desk",
         workingDays: 8,
         priority: "High" as const,
         status: "Open" as const,
@@ -538,6 +686,7 @@ class IndexedDBStorage {
         department: "Sports",
         ticketType: "Club",
         clientName: "Sarah Johnson",
+        ticketOwner: "Front Desk",
         workingDays: 6,
         priority: "Medium" as const,
         status: "In Progress" as const,
@@ -547,6 +696,7 @@ class IndexedDBStorage {
         department: "Customer Care",
         ticketType: "General Info",
         clientName: "Mohamed Ali",
+        ticketOwner: "Front Desk",
         workingDays: 2,
         priority: "Low" as const,
         status: "Resolved" as const,
@@ -556,6 +706,7 @@ class IndexedDBStorage {
         department: "Contracts",
         ticketType: "Contract Signing",
         clientName: "Fatima Hassan",
+        ticketOwner: "Front Desk",
         workingDays: 5,
         priority: "High" as const,
         status: "Open" as const,
@@ -565,6 +716,7 @@ class IndexedDBStorage {
         department: "TCR",
         ticketType: "WORK PERMIT",
         clientName: "Omar Khaled",
+        ticketOwner: "Front Desk",
         workingDays: 1,
         priority: "Critical" as const,
         status: "In Progress" as const,
@@ -574,6 +726,7 @@ class IndexedDBStorage {
         department: "Security",
         ticketType: "Access permission",
         clientName: "Layla Ahmed",
+        ticketOwner: "Front Desk",
         workingDays: 2,
         priority: "Medium" as const,
         status: "Open" as const,
@@ -583,6 +736,7 @@ class IndexedDBStorage {
         department: "FM (Facilities Management)",
         ticketType: "Maintenance Works",
         clientName: "Hassan Ibrahim",
+        ticketOwner: "Front Desk",
         workingDays: 3,
         priority: "Medium" as const,
         status: "Open" as const,
@@ -592,6 +746,7 @@ class IndexedDBStorage {
         department: "HO (Handover)",
         ticketType: "Setting an appointment",
         clientName: "Nour El-Din",
+        ticketOwner: "Front Desk",
         workingDays: 2,
         priority: "High" as const,
         status: "In Progress" as const,
@@ -601,6 +756,7 @@ class IndexedDBStorage {
         department: "CM (Community Management)",
         ticketType: "Security Issues",
         clientName: "Mariam Farouk",
+        ticketOwner: "Front Desk",
         workingDays: 1,
         priority: "Critical" as const,
         status: "Open" as const,
@@ -610,6 +766,7 @@ class IndexedDBStorage {
         department: "Resale & Rental",
         ticketType: "Existing client renting unit",
         clientName: "Karim Mostafa",
+        ticketOwner: "Front Desk",
         workingDays: 5,
         priority: "Medium" as const,
         status: "Resolved" as const,
@@ -619,6 +776,7 @@ class IndexedDBStorage {
         department: "Collection",
         ticketType: "General Inquiry",
         clientName: "Dina Samir",
+        ticketOwner: "Front Desk",
         workingDays: 2,
         priority: "Low" as const,
         status: "Open" as const,
@@ -628,6 +786,7 @@ class IndexedDBStorage {
         department: "Sports",
         ticketType: "Gym",
         clientName: "Youssef Nabil",
+        ticketOwner: "Front Desk",
         workingDays: 3,
         priority: "Medium" as const,
         status: "In Progress" as const,
@@ -638,22 +797,156 @@ class IndexedDBStorage {
     for (const ticketData of sampleTickets) {
       await this.createTicket(ticketData);
     }
-
-    console.log(`Seeded ${sampleTickets.length} sample tickets`);
   }
 
   // Clear all data (for testing)
   async clearAll(): Promise<void> {
     const db = this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(["departments", "tickets", "ticketHistory"], "readwrite");
+      const transaction = db.transaction(["departments", "tickets", "ticketHistory", "workflows", "workflowResolutions"], "readwrite");
 
       transaction.objectStore("departments").clear();
       transaction.objectStore("tickets").clear();
       transaction.objectStore("ticketHistory").clear();
+      transaction.objectStore("workflows").clear();
+      transaction.objectStore("workflowResolutions").clear();
 
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  // Workflow Management
+  async createWorkflow(workflow: Omit<Workflow, "id" | "createdAt" | "updatedAt">): Promise<Workflow> {
+    const db = this.ensureDB();
+    const now = new Date();
+    const newWorkflow: Workflow = {
+      ...workflow,
+      id: this.generateId(),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflows"], "readwrite");
+      const store = transaction.objectStore("workflows");
+      const request = store.add(newWorkflow);
+
+      request.onsuccess = () => resolve(newWorkflow);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getWorkflows(): Promise<Workflow[]> {
+    const db = this.ensureDB();
+    if (!db) {
+      return [];
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflows"], "readonly");
+      const store = transaction.objectStore("workflows");
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getWorkflow(id: string): Promise<Workflow | null> {
+    const db = this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflows"], "readonly");
+      const store = transaction.objectStore("workflows");
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getDefaultWorkflow(): Promise<Workflow | null> {
+    const db = this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflows"], "readonly");
+      const store = transaction.objectStore("workflows");
+      const index = store.index("isDefault");
+      const request = index.get(true);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async updateWorkflow(id: string, updates: Partial<Workflow>): Promise<Workflow> {
+    const db = this.ensureDB();
+    const existing = await this.getWorkflow(id);
+    if (!existing) {
+      throw new Error("Workflow not found");
+    }
+
+    const updated: Workflow = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflows"], "readwrite");
+      const store = transaction.objectStore("workflows");
+      const request = store.put(updated);
+
+      request.onsuccess = () => resolve(updated);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteWorkflow(id: string): Promise<void> {
+    const db = this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflows"], "readwrite");
+      const store = transaction.objectStore("workflows");
+      const request = store.delete(id);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Workflow Resolution Management
+  async createWorkflowResolution(resolution: Omit<WorkflowResolution, "id" | "resolvedAt">): Promise<WorkflowResolution> {
+    const db = this.ensureDB();
+    const now = new Date();
+    const newResolution: WorkflowResolution = {
+      ...resolution,
+      id: this.generateId(),
+      resolvedAt: now,
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflowResolutions"], "readwrite");
+      const store = transaction.objectStore("workflowResolutions");
+      const request = store.add(newResolution);
+
+      request.onsuccess = () => resolve(newResolution);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getWorkflowResolutions(ticketId: string): Promise<WorkflowResolution[]> {
+    const db = this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["workflowResolutions"], "readonly");
+      const store = transaction.objectStore("workflowResolutions");
+      const index = store.index("ticketId");
+      const request = index.getAll(ticketId);
+
+      request.onsuccess = () => {
+        const resolutions = request.result;
+        // Sort by resolution date (newest first)
+        resolutions.sort((a: WorkflowResolution, b: WorkflowResolution) => b.resolvedAt.getTime() - a.resolvedAt.getTime());
+        resolve(resolutions);
+      };
+      request.onerror = () => reject(request.error);
     });
   }
 
@@ -668,7 +961,6 @@ class IndexedDBStorage {
     return new Promise((resolve, reject) => {
       const deleteRequest = indexedDB.deleteDatabase(this.dbName);
       deleteRequest.onsuccess = () => {
-        console.log("Database deleted successfully");
         resolve();
       };
       deleteRequest.onerror = () => reject(deleteRequest.error);

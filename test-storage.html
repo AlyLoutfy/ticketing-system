@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Storage Test</title>
+  </head>
+  <body>
+    <h1>Storage Test</h1>
+    <div id="output"></div>
+
+    <script>
+      async function testStorage() {
+        const output = document.getElementById("output");
+
+        try {
+          output.innerHTML += "<p>Testing IndexedDB...</p>";
+
+          // Test basic IndexedDB
+          const request = indexedDB.open("TestDB", 1);
+
+          request.onerror = () => {
+            output.innerHTML += '<p style="color: red;">IndexedDB error: ' + request.error + "</p>";
+          };
+
+          request.onsuccess = () => {
+            output.innerHTML += '<p style="color: green;">IndexedDB opened successfully</p>';
+            const db = request.result;
+            output.innerHTML += "<p>Object stores: " + Array.from(db.objectStoreNames).join(", ") + "</p>";
+            db.close();
+          };
+
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            output.innerHTML += "<p>Creating test store...</p>";
+            db.createObjectStore("test", { keyPath: "id" });
+          };
+        } catch (error) {
+          output.innerHTML += '<p style="color: red;">Error: ' + error.message + "</p>";
+        }
+      }
+
+      testStorage();
+    </script>
+  </body>
+</html>
+

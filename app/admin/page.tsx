@@ -7,12 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { storage, Department, TicketType } from "@/lib/storage";
-import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { storage, Department, TicketType, Workflow } from "@/lib/storage";
+import { SLADisplay } from "@/components/ui/sla-display";
+import { parseSLA } from "@/lib/utils/sla-formatter";
+import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowRight, GripVertical, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+
+// Predefined sub-categories
+const SUB_CATEGORIES = ["General", "Finance", "Security", "Administrative", "Operations", "Membership", "Contracts", "Handover", "Maintenance", "Inquiries", "Complaints", "Communication", "Technical", "Legal", "Human Resources", "Marketing", "Sales", "Customer Service", "IT Support", "Facilities"];
 
 export default function AdminPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSeeded, setIsSeeded] = useState(false);
 
@@ -38,11 +45,12 @@ export default function AdminPage() {
   const loadDepartments = async () => {
     try {
       await storage.init();
-      const depts = await storage.getDepartments();
+      const [depts, workflowsData] = await Promise.all([storage.getDepartments(), storage.getWorkflows()]);
       setDepartments(depts);
+      setWorkflows(workflowsData);
       setIsSeeded(depts.length > 0);
     } catch (error) {
-      console.error("Error loading departments:", error);
+      console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
@@ -65,6 +73,16 @@ export default function AdminPage() {
   };
 
   const totalTicketTypes = departments.reduce((sum, dept) => sum + dept.ticketTypes.length, 0);
+
+  const getWorkflowName = (workflowId?: string) => {
+    if (!workflowId) return "Default";
+    const workflow = workflows.find((w) => w.id === workflowId);
+    return workflow ? workflow.name : "Unknown";
+  };
+
+  const getDefaultWorkflow = () => {
+    return workflows.find((w) => w.isDefault);
+  };
 
   // Department CRUD functions
   const handleCreateDepartment = async () => {
@@ -141,13 +159,20 @@ export default function AdminPage() {
   };
 
   const addNewTicketTypeRow = (deptId: string) => {
+    const now = new Date();
     const newTicketType: TicketType = {
-      id: `temp-${Date.now()}`,
+      id: `temp-${now.getTime()}`,
       name: "",
       defaultWD: 5,
       description: "",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      subCategory: "",
+      sla: {
+        value: 5,
+        unit: "days",
+      },
+      priority: "Medium",
+      createdAt: now,
+      updatedAt: now,
     };
 
     setEditingTicketTypes((prev) => ({
@@ -160,7 +185,7 @@ export default function AdminPage() {
     }));
   };
 
-  const updateTicketTypeInEdit = (deptId: string, index: number, field: keyof TicketType, value: string | number) => {
+  const updateTicketTypeInEdit = (deptId: string, index: number, field: keyof TicketType, value: string | number | { value: number; unit: "hours" | "days" }) => {
     setEditingTicketTypes((prev) => {
       const updated = [...(prev[deptId] || [])];
       updated[index] = { ...updated[index], [field]: value };
@@ -170,6 +195,13 @@ export default function AdminPage() {
       ...prev,
       [deptId]: true,
     }));
+  };
+
+  const handleWorkflowClick = (workflowId?: string) => {
+    if (workflowId) {
+      // Navigate to workflows page with the specific workflow to edit
+      window.location.href = `/admin/workflows?edit=${workflowId}`;
+    }
   };
 
   const removeTicketTypeFromEdit = (deptId: string, index: number) => {
@@ -245,19 +277,27 @@ export default function AdminPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Manage departments and ticket types</p>
+        <div className="flex items-center gap-4">
+          <Link href="/">
+            <Button variant="outline" size="sm" className="cursor-pointer">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Tickets
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-gray-600 mt-2">Manage departments and ticket types</p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Link href="/">
-            <Button variant="outline">
-              <Ticket className="w-4 h-4 mr-2" />
-              View Tickets
+          <Link href="/admin/workflows">
+            <Button variant="outline" className="cursor-pointer">
+              <WorkflowIcon className="w-4 h-4 mr-2" />
+              Manage Workflows
             </Button>
           </Link>
           <Link href="/tickets/create">
-            <Button>
+            <Button className="cursor-pointer">
               <Plus className="w-4 h-4 mr-2" />
               Create Ticket
             </Button>
@@ -304,14 +344,10 @@ export default function AdminPage() {
         <Card className="p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">System Status</p>
-              <p className="text-lg font-bold">
-                <Badge variant="secondary" className="text-green-600 bg-green-100 text-xs">
-                  Ready
-                </Badge>
-              </p>
+              <p className="text-xs text-muted-foreground">Workflows</p>
+              <p className="text-lg font-bold">{workflows.length}</p>
             </div>
-            <Settings className="h-4 w-4 text-muted-foreground" />
+            <WorkflowIcon className="h-4 w-4 text-muted-foreground" />
           </div>
         </Card>
       </div>
@@ -341,7 +377,7 @@ export default function AdminPage() {
                   <DialogDescription>{editingDept ? "Update the department information" : "Create a new department for organizing ticket types"}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div>
+                  <div className="space-y-3">
                     <Label htmlFor="deptName">Department Name *</Label>
                     <Input id="deptName" value={deptFormData.name} onChange={(e) => setDeptFormData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Enter department name" />
                   </div>
@@ -396,10 +432,8 @@ export default function AdminPage() {
                     {/* Department Header */}
                     <div className="p-4 border-b bg-gray-50">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Button variant="ghost" size="sm" onClick={() => toggleDepartment(department.id)} className="p-1">
-                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </Button>
+                        <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => toggleDepartment(department.id)}>
+                          <div className="p-1">{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</div>
                           <div>
                             <h3 className="font-semibold text-lg">{department.name}</h3>
                             <p className="text-sm text-gray-600">{department.ticketTypes.length} ticket types</p>
@@ -408,16 +442,16 @@ export default function AdminPage() {
                         <div className="flex gap-2">
                           {isEditing ? (
                             <>
-                              <Button variant="outline" size="sm" onClick={() => cancelEditingDepartment(department.id)}>
+                              <Button variant="outline" size="sm" onClick={() => cancelEditingDepartment(department.id)} className="cursor-pointer">
                                 Cancel
                               </Button>
-                              <Button size="sm" onClick={() => saveDepartmentChanges(department.id)} disabled={!hasChanges}>
+                              <Button size="sm" onClick={() => saveDepartmentChanges(department.id)} disabled={!hasChanges} className="cursor-pointer">
                                 <Save className="w-4 h-4 mr-2" />
                                 Save Changes
                               </Button>
                             </>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteDepartment(department.id)}>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteDepartment(department.id)} className="cursor-pointer">
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
                             </Button>
@@ -431,77 +465,195 @@ export default function AdminPage() {
                       <div className="p-4">
                         {isEditing ? (
                           <div className="space-y-4">
-                            <h4 className="font-medium">Ticket Types</h4>
-                            <div className="overflow-x-auto">
-                              <table className="w-full border-collapse">
-                                <thead>
-                                  <tr className="border-b">
-                                    <th className="text-left p-2 font-medium text-sm">Name</th>
-                                    <th className="text-left p-2 font-medium text-sm">Default WD</th>
-                                    <th className="text-left p-2 font-medium text-sm">Description</th>
-                                    <th className="text-left p-2 font-medium text-sm w-20">Actions</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {ticketTypes.map((type, index) => (
-                                    <tr key={type.id} className="border-b">
-                                      <td className="p-2">
-                                        <Input value={type.name} onChange={(e) => updateTicketTypeInEdit(department.id, index, "name", e.target.value)} placeholder="Ticket type name" className="h-8" />
-                                      </td>
-                                      <td className="p-2">
-                                        <Input type="number" min="1" value={type.defaultWD} onChange={(e) => updateTicketTypeInEdit(department.id, index, "defaultWD", parseInt(e.target.value) || 1)} className="h-8 w-20" />
-                                      </td>
-                                      <td className="p-2">
-                                        <Input value={type.description || ""} onChange={(e) => updateTicketTypeInEdit(department.id, index, "description", e.target.value)} placeholder="Optional description" className="h-8" />
-                                      </td>
-                                      <td className="p-2">
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => removeTicketTypeFromEdit(department.id, index)}>
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                              <div className="flex justify-center pt-2">
-                                <Button variant="ghost" size="sm" onClick={() => addNewTicketTypeRow(department.id)} className="text-blue-600 hover:text-blue-700">
-                                  <Plus className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium">Ticket Types ({department.ticketTypes.length})</h4>
-                              <Button variant="outline" size="sm" onClick={() => startEditingDepartment(department)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Ticket Types
-                              </Button>
-                            </div>
-                            {department.ticketTypes.length > 0 ? (
+                            <h4 className="text-lg font-semibold text-gray-900">Ticket Types</h4>
+
+                            <div className="bg-white border border-gray-300 overflow-hidden">
                               <div className="overflow-x-auto">
                                 <table className="w-full border-collapse">
                                   <thead>
-                                    <tr className="border-b">
-                                      <th className="text-left p-2 font-medium text-sm">Name</th>
-                                      <th className="text-left p-2 font-medium text-sm">Default WD</th>
-                                      <th className="text-left p-2 font-medium text-sm">Description</th>
+                                    <tr className="bg-gray-100">
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Name</th>
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Sub-Category</th>
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-20">SLA Value</th>
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">SLA Unit</th>
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">Priority</th>
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Workflow</th>
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Description</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-20">Actions</th>
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {department.ticketTypes.map((type) => (
-                                      <tr key={type.id} className="border-b">
-                                        <td className="p-2 text-sm">{type.name}</td>
-                                        <td className="p-2 text-sm">{type.defaultWD}</td>
-                                        <td className="p-2 text-sm text-gray-600">{type.description || "-"}</td>
+                                    {ticketTypes.map((type, index) => (
+                                      <tr key={type.id} className="hover:bg-blue-50 transition-colors">
+                                        <td className="border-r border-gray-300 p-0">
+                                          <Input value={type.name} onChange={(e) => updateTicketTypeInEdit(department.id, index, "name", e.target.value)} placeholder="Ticket type name" className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none" />
+                                        </td>
+                                        <td className="border-r border-gray-300 p-0">
+                                          <Select value={type.subCategory || "General"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "subCategory", value)}>
+                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {SUB_CATEGORIES.map((category) => (
+                                                <SelectItem key={category} value={category}>
+                                                  {category}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </td>
+                                        <td className="border-r border-gray-300 p-0">
+                                          <Input
+                                            type="number"
+                                            min="1"
+                                            value={typeof type.sla === "object" ? type.sla?.value || 5 : parseSLA(type.sla).value}
+                                            onChange={(e) => {
+                                              const currentSLA = typeof type.sla === "object" ? type.sla || { value: 5, unit: "days" } : parseSLA(type.sla);
+                                              updateTicketTypeInEdit(department.id, index, "sla", {
+                                                ...currentSLA,
+                                                value: parseInt(e.target.value) || 1,
+                                              });
+                                            }}
+                                            className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none"
+                                          />
+                                        </td>
+                                        <td className="border-r border-gray-300 p-0">
+                                          <Select
+                                            value={typeof type.sla === "object" ? type.sla?.unit || "days" : parseSLA(type.sla).unit}
+                                            onValueChange={(value: "hours" | "days") => {
+                                              const currentSLA = typeof type.sla === "object" ? type.sla || { value: 5, unit: "days" } : parseSLA(type.sla);
+                                              updateTicketTypeInEdit(department.id, index, "sla", {
+                                                ...currentSLA,
+                                                unit: value,
+                                              });
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="hours">Hours</SelectItem>
+                                              <SelectItem value="days">Working Days</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </td>
+                                        <td className="border-r border-gray-300 p-0">
+                                          <Select value={type.priority || "Medium"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "priority", value)}>
+                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="Low">Low</SelectItem>
+                                              <SelectItem value="Medium">Medium</SelectItem>
+                                              <SelectItem value="High">High</SelectItem>
+                                              <SelectItem value="Critical">Critical</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </td>
+                                        <td className="border-r border-gray-300 p-0">
+                                          <Select value={type.workflowId || ""} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "workflowId", value === "default" ? "" : value)}>
+                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
+                                              <SelectValue placeholder="Select workflow" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="default">Default Workflow</SelectItem>
+                                              {workflows.map((workflow) => (
+                                                <SelectItem key={workflow.id} value={workflow.id}>
+                                                  {workflow.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </td>
+                                        <td className="border-r border-gray-300 p-0">
+                                          <Input value={type.description || ""} onChange={(e) => updateTicketTypeInEdit(department.id, index, "description", e.target.value)} placeholder="Optional description" className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none" />
+                                        </td>
+                                        <td className="p-0 text-center">
+                                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-none" onClick={() => removeTicketTypeFromEdit(department.id, index)}>
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </td>
                                       </tr>
                                     ))}
                                   </tbody>
                                 </table>
                               </div>
+
+                              {ticketTypes.length === 0 && (
+                                <div className="text-center py-12">
+                                  <div className="text-gray-400 mb-4">
+                                    <Plus className="w-12 h-12 mx-auto" />
+                                  </div>
+                                  <p className="text-gray-600 font-medium">No ticket types yet</p>
+                                  <p className="text-sm text-gray-500">Click "Add Ticket Type" to create your first one</p>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex justify-center">
+                              <Button variant="outline" size="sm" onClick={() => addNewTicketTypeRow(department.id)} className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Ticket Type
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-lg font-semibold text-gray-900">Ticket Types ({department.ticketTypes.length})</h4>
+                              <Button variant="outline" size="sm" onClick={() => startEditingDepartment(department)} className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer">
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Ticket Types
+                              </Button>
+                            </div>
+
+                            {department.ticketTypes.length > 0 ? (
+                              <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                                <div className="overflow-x-auto">
+                                  <table className="w-full">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                      <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Name</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Sub-Category</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">SLA</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Priority</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Workflow</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Description</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                      {department.ticketTypes.map((type) => (
+                                        <tr key={type.id} className="hover:bg-gray-50 transition-colors">
+                                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{type.name}</td>
+                                          <td className="px-4 py-3 text-sm text-gray-600">{type.subCategory || "-"}</td>
+                                          <td className="px-4 py-3 text-sm text-gray-900">
+                                            <SLADisplay sla={type.sla} />
+                                          </td>
+                                          <td className="px-4 py-3">
+                                            <Badge variant={type.priority === "Critical" ? "destructive" : type.priority === "High" ? "default" : "secondary"}>{type.priority || "Medium"}</Badge>
+                                          </td>
+                                          <td className="px-4 py-3 text-sm">
+                                            <button onClick={() => handleWorkflowClick(type.workflowId)} className={`font-medium transition-colors cursor-pointer ${type.workflowId ? "text-blue-600 hover:text-blue-800 hover:underline" : "text-gray-600"}`}>
+                                              {getWorkflowName(type.workflowId)}
+                                            </button>
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-600">{type.description || "-"}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
                             ) : (
-                              <p className="text-sm text-gray-500 text-center py-4">No ticket types yet. Click &quot;Edit Ticket Types&quot; to add some.</p>
+                              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                                <div className="text-center py-12">
+                                  <div className="text-gray-400 mb-4">
+                                    <Edit className="w-12 h-12 mx-auto" />
+                                  </div>
+                                  <p className="text-gray-600 font-medium">No ticket types yet</p>
+                                  <p className="text-sm text-gray-500">Click "Edit Ticket Types" to add some</p>
+                                </div>
+                              </div>
                             )}
                           </div>
                         )}

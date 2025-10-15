@@ -8,10 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { storage, Ticket, Department } from "@/lib/storage";
-import { formatDate, isOverdue, getPriorityColor, getStatusColor } from "@/lib/utils/date-calculator";
-import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, Search, ChevronLeft, ChevronRight, X, Calendar, Trash2, Edit2, Check } from "lucide-react";
+import { formatDate, isOverdue, getPriorityColor, getStatusColor, getDaysUntilDue } from "@/lib/utils/date-calculator";
+import { SLADisplay } from "@/components/ui/sla-display";
+import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, Search, ChevronLeft, ChevronRight, X, Calendar, Trash2, Edit2, Check, Eye, Edit } from "lucide-react";
 import Link from "next/link";
+
+// Helper function to check if text is truncated
+const isTextTruncated = (text: string, maxWidth: number) => {
+  // Rough estimation: average character width is about 8px, so we calculate approximate width
+  const estimatedWidth = text.length * 8;
+  return estimatedWidth > maxWidth;
+};
 
 export default function Home() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -24,15 +34,28 @@ export default function Home() {
 
   const [filters, setFilters] = useState({
     search: "",
-    department: "",
-    status: "",
-    priority: "",
-    dateRange: "",
+    department: "all",
+    status: "all",
+    priority: "all",
+    dateRange: "all",
   });
+
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("All");
+  const [scrollPosition, setScrollPosition] = useState<number>(0);
+  const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
 
   // Selection state
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
+
+  // Confirmation modal state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationAction, setConfirmationAction] = useState<{
+    type: "edit" | "delete";
+    ticketId: string;
+    field?: string;
+    newValue?: string;
+  } | null>(null);
 
   // Inline editing state
   const [editingTicket, setEditingTicket] = useState<string | null>(null);
@@ -43,8 +66,45 @@ export default function Home() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
 
+  // Ticket modal state
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [selectedTicketForModal, setSelectedTicketForModal] = useState<Ticket | null>(null);
+
+  const loadData = async () => {
+    try {
+      console.log("Starting data load...");
+      await storage.init();
+      console.log("Storage initialized");
+
+      // Check if we need to seed data
+      const existingDepartments = await storage.getDepartments();
+      console.log("Existing departments:", existingDepartments.length);
+      if (existingDepartments.length === 0) {
+        console.log("Seeding departments...");
+        const departmentsData = await import("@/data/departments.json");
+        await storage.seedDepartments(departmentsData.default);
+        await storage.seedSampleTickets();
+        console.log("Departments seeded");
+      }
+
+      console.log("Loading tickets and departments...");
+      const [ticketsData, departmentsData] = await Promise.all([storage.getTickets(), storage.getDepartments()]);
+      console.log("Loaded tickets:", ticketsData.length, "departments:", departmentsData.length);
+      setTickets(ticketsData);
+      setDepartments(departmentsData);
+      console.log("Data loaded successfully");
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      console.log("Setting loading to false");
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    console.log("useEffect: setting mounted to true");
     setMounted(true);
+    console.log("useEffect: calling loadData");
     loadData();
   }, []);
 
@@ -52,261 +112,214 @@ export default function Home() {
     if (mounted) {
       applyFilters();
     }
-  }, [tickets, filters, mounted]);
-
-  const loadData = async () => {
-    try {
-      await storage.init();
-
-      // Check if we need to seed data
-      const existingDepartments = await storage.getDepartments();
-      if (existingDepartments.length === 0) {
-        console.log("Seeding database with departments and sample tickets...");
-        const departmentsData = await import("@/data/departments.json");
-        await storage.seedDepartments(departmentsData.default);
-        await storage.seedSampleTickets();
-      }
-
-      const [ticketsData, departmentsData] = await Promise.all([storage.getTickets(), storage.getDepartments()]);
-      setTickets(ticketsData);
-      setDepartments(departmentsData);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [tickets, filters, mounted, selectedDepartment]);
 
   const applyFilters = () => {
     let filtered = [...tickets];
+
+    // Apply department filter first
+    if (selectedDepartment !== "All") {
+      filtered = filtered.filter((ticket) => ticket.department === selectedDepartment);
+    }
 
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter((ticket) => ticket.clientName.toLowerCase().includes(searchLower) || ticket.ticketType.toLowerCase().includes(searchLower));
     }
 
-    if (filters.department) {
+    if (filters.department && filters.department !== "all") {
       filtered = filtered.filter((ticket) => ticket.department === filters.department);
     }
 
-    if (filters.status) {
+    if (filters.status && filters.status !== "all") {
       filtered = filtered.filter((ticket) => ticket.status === filters.status);
     }
 
-    if (filters.priority) {
+    if (filters.priority && filters.priority !== "all") {
       filtered = filtered.filter((ticket) => ticket.priority === filters.priority);
     }
 
-    if (filters.dateRange) {
+    if (filters.dateRange && filters.dateRange !== "all" && mounted) {
       const today = new Date();
       const filterDate = new Date();
 
       switch (filters.dateRange) {
         case "today":
+          filterDate.setHours(0, 0, 0, 0);
           filtered = filtered.filter((ticket) => {
             const ticketDate = new Date(ticket.createdAt);
-            return ticketDate.toDateString() === today.toDateString();
+            ticketDate.setHours(0, 0, 0, 0);
+            return ticketDate.getTime() === filterDate.getTime();
           });
           break;
         case "week":
-          filterDate.setDate(today.getDate() - 7);
-          filtered = filtered.filter((ticket) => new Date(ticket.createdAt) >= filterDate);
+          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+          filtered = filtered.filter((ticket) => new Date(ticket.createdAt) >= weekAgo);
           break;
         case "month":
-          filterDate.setMonth(today.getMonth() - 1);
-          filtered = filtered.filter((ticket) => new Date(ticket.createdAt) >= filterDate);
-          break;
-        case "overdue":
-          filtered = filtered.filter((ticket) => isOverdue(ticket.dueDate) && ticket.status !== "Resolved" && ticket.status !== "Rejected");
+          const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+          filtered = filtered.filter((ticket) => new Date(ticket.createdAt) >= monthAgo);
           break;
       }
     }
 
     setFilteredTickets(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   };
 
-  const clearFilters = () => {
-    setFilters({
-      search: "",
-      department: "",
-      status: "",
-      priority: "",
-      dateRange: "",
-    });
+  const handleScroll = (direction: "left" | "right") => {
+    const container = document.getElementById("department-nav");
+    if (!container) return;
+
+    const scrollAmount = 200;
+    const newPosition = direction === "left" ? Math.max(0, scrollPosition - scrollAmount) : scrollPosition + scrollAmount;
+
+    container.scrollTo({ left: newPosition, behavior: "smooth" });
+    setScrollPosition(newPosition);
+
+    // Check if we can scroll further right
+    setTimeout(() => {
+      const canScroll = container.scrollWidth > container.clientWidth + newPosition;
+      setCanScrollRight(canScroll);
+    }, 100);
   };
 
-  // Selection functions
-  const handleSelectTicket = (ticketId: string) => {
-    const newSelected = new Set(selectedTickets);
-    if (newSelected.has(ticketId)) {
-      newSelected.delete(ticketId);
-    } else {
-      newSelected.add(ticketId);
-    }
-    setSelectedTickets(newSelected);
-    setShowBulkActions(newSelected.size > 0);
-  };
-
-  const handleSelectAll = () => {
-    if (selectedTickets.size === currentTickets.length) {
-      setSelectedTickets(new Set());
-      setShowBulkActions(false);
-    } else {
-      setSelectedTickets(new Set(currentTickets.map((t) => t.id)));
-      setShowBulkActions(true);
-    }
-  };
-
-  const clearSelection = () => {
-    setSelectedTickets(new Set());
-    setShowBulkActions(false);
-  };
-
-  // Bulk actions
-  const handleBulkUpdateStatus = async (newStatus: string) => {
-    if (selectedTickets.size === 0) return;
-
-    try {
-      const updates = Array.from(selectedTickets).map((ticketId) => storage.updateTicket(ticketId, { status: newStatus as Ticket["status"] }));
-      await Promise.all(updates);
-      await loadData();
-      clearSelection();
-    } catch (error) {
-      console.error("Error updating ticket statuses:", error);
-      alert("Error updating ticket statuses. Please try again.");
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedTickets.size === 0) return;
-
-    if (!confirm(`Are you sure you want to delete ${selectedTickets.size} ticket(s)?`)) return;
-
-    try {
-      const deletions = Array.from(selectedTickets).map((ticketId) => storage.deleteTicket(ticketId));
-      await Promise.all(deletions);
-      await loadData();
-      clearSelection();
-    } catch (error) {
-      console.error("Error deleting tickets:", error);
-      alert("Error deleting tickets. Please try again.");
-    }
-  };
-
-  const handleBulkPushDueDate = async (newDueDate: string) => {
-    if (selectedTickets.size === 0) return;
-
-    try {
-      const updates = Array.from(selectedTickets).map((ticketId) => storage.updateTicket(ticketId, { dueDate: new Date(newDueDate) }));
-      await Promise.all(updates);
-      await loadData();
-      clearSelection();
-      setShowCalendar(false);
-    } catch (error) {
-      console.error("Error updating due dates:", error);
-      alert("Error updating due dates. Please try again.");
-    }
-  };
-
-  // Inline editing functions
-  const startEditing = (ticketId: string, field: string, currentValue: string) => {
+  const handleInlineEdit = (ticketId: string, field: string, currentValue: string) => {
     setEditingTicket(ticketId);
     setEditingField(field);
     setEditValue(currentValue);
   };
 
-  const cancelEditing = () => {
+  const handleInlineSave = async () => {
+    if (!editingTicket || !editingField) return;
+
+    try {
+      const updates: Partial<Ticket> = {};
+      updates[editingField as keyof Ticket] = editValue as any;
+
+      await storage.updateTicket(editingTicket, updates);
+
+      // Refresh tickets
+      const updatedTickets = await storage.getTickets();
+      setTickets(updatedTickets);
+
+      setEditingTicket(null);
+      setEditingField(null);
+      setEditValue("");
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+    }
+  };
+
+  const handleInlineCancel = () => {
     setEditingTicket(null);
     setEditingField(null);
     setEditValue("");
   };
 
-  const saveEdit = async () => {
-    if (!editingTicket || !editingField) return;
-
-    // Get the current ticket to compare values
-    const currentTicket = tickets.find((t) => t.id === editingTicket);
-    if (!currentTicket) return;
-
-    // Check if value actually changed
-    let hasChanged = false;
-    if (editingField === "clientName" && editValue.trim() !== currentTicket.clientName) {
-      hasChanged = true;
-    } else if (editingField === "status" && editValue !== currentTicket.status) {
-      hasChanged = true;
+  const handleDeleteTicket = async (ticketId: string) => {
+    try {
+      await storage.deleteTicket(ticketId);
+      const updatedTickets = await storage.getTickets();
+      setTickets(updatedTickets);
+      setShowConfirmation(false);
+      setConfirmationAction(null);
+    } catch (error) {
+      console.error("Error deleting ticket:", error);
     }
+  };
 
-    if (!hasChanged) {
-      cancelEditing();
-      return;
-    }
-
-    // Show confirmation prompt
-    const fieldName = editingField === "clientName" ? "client name" : "status";
-    const oldValue = editingField === "clientName" ? currentTicket.clientName : currentTicket.status;
-    const newValue = editValue.trim();
-
-    if (!confirm(`Are you sure you want to change the ${fieldName} from "${oldValue}" to "${newValue}"?`)) {
-      cancelEditing();
-      return;
-    }
+  const handleBulkAction = async (action: "delete" | "updateStatus") => {
+    if (selectedTickets.size === 0) return;
 
     try {
-      const updates: Partial<Ticket> = {};
-
-      if (editingField === "clientName") {
-        updates.clientName = editValue.trim();
-      } else if (editingField === "status") {
-        updates.status = editValue as Ticket["status"];
+      for (const ticketId of selectedTickets) {
+        if (action === "delete") {
+          await storage.deleteTicket(ticketId);
+        } else if (action === "updateStatus") {
+          await storage.updateTicket(ticketId, { status: "Resolved" });
+        }
       }
 
-      await storage.updateTicket(editingTicket, updates);
-      await loadData();
-      cancelEditing();
+      const updatedTickets = await storage.getTickets();
+      setTickets(updatedTickets);
+      setSelectedTickets(new Set());
+      setShowBulkActions(false);
     } catch (error) {
-      console.error("Error updating ticket:", error);
-      alert("Error updating ticket. Please try again.");
+      console.error("Error performing bulk action:", error);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      saveEdit();
-    } else if (e.key === "Escape") {
-      cancelEditing();
-    }
-  };
-
-  // Check if any filters are active
-  const hasActiveFilters = filters.search || filters.department || filters.status || filters.priority || filters.dateRange;
-
-  // Function to handle card clicks for filtering
-  const handleCardClick = (filterType: string, filterValue: string) => {
-    if (filters[filterType as keyof typeof filters] === filterValue) {
-      // If already filtered by this value, clear the filter
-      setFilters((prev) => ({ ...prev, [filterType]: "" }));
+  const handleTicketSelection = (ticketId: string, selected: boolean) => {
+    const newSelection = new Set(selectedTickets);
+    if (selected) {
+      newSelection.add(ticketId);
     } else {
-      // Set the filter
-      setFilters((prev) => ({ ...prev, [filterType]: filterValue }));
+      newSelection.delete(ticketId);
+    }
+    setSelectedTickets(newSelection);
+    setShowBulkActions(newSelection.size > 0);
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      const allIds = new Set(filteredTickets.map((ticket) => ticket.id));
+      setSelectedTickets(allIds);
+    } else {
+      setSelectedTickets(new Set());
+    }
+    setShowBulkActions(selected);
+  };
+
+  const handlePushDueDate = async (ticketId: string, days: number) => {
+    try {
+      const ticket = await storage.getTicket(ticketId);
+      if (!ticket) return;
+
+      const newDueDate = new Date(ticket.dueDate);
+      newDueDate.setDate(newDueDate.getDate() + days);
+
+      await storage.updateTicket(ticketId, { dueDate: newDueDate });
+
+      const updatedTickets = await storage.getTickets();
+      setTickets(updatedTickets);
+    } catch (error) {
+      console.error("Error pushing due date:", error);
     }
   };
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentTickets = filteredTickets.slice(startIndex, endIndex);
+  const handleSetCustomDueDate = async (ticketId: string, date: Date) => {
+    try {
+      await storage.updateTicket(ticketId, { dueDate: date });
 
-  const getOverdueCount = () => {
-    return tickets.filter((ticket) => ticket.status !== "Resolved" && ticket.status !== "Rejected" && isOverdue(ticket.dueDate)).length;
+      const updatedTickets = await storage.getTickets();
+      setTickets(updatedTickets);
+      setShowCalendar(false);
+      setSelectedDate("");
+    } catch (error) {
+      console.error("Error setting custom due date:", error);
+    }
   };
 
   const getStatusCount = (status: string) => {
     return tickets.filter((ticket) => ticket.status === status).length;
   };
 
+  const getTicketNumber = (ticketId: string) => {
+    // Extract numeric part from ticket ID (e.g., "id_123" -> "123")
+    const match = ticketId.match(/\d+/);
+    return match ? match[0] : ticketId;
+  };
+
+  const handleTicketIdClick = (ticket: Ticket) => {
+    setSelectedTicketForModal(ticket);
+    setShowTicketModal(true);
+  };
+
+  console.log("Render check - loading:", loading, "mounted:", mounted);
+
   if (loading || !mounted) {
+    console.log("Showing loading spinner");
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
@@ -318,134 +331,170 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50" suppressHydrationWarning>
-      {/* Header */}
-      <div className="flex-shrink-0 px-8 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Real Estate Ticketing System</h1>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/admin">
-              <Button variant="outline">
-                <Settings className="w-4 h-4 mr-2" />
-                Admin Panel
-              </Button>
-            </Link>
-            <Link href="/tickets/create">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Ticket
-              </Button>
-            </Link>
+    <TooltipProvider>
+      <div className="h-screen flex flex-col bg-gray-50" suppressHydrationWarning>
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center space-x-4">
+                <TicketIcon className="h-8 w-8 text-blue-600" />
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Real Estate Ticketing System</h1>
+                  <p className="text-sm text-gray-500">Manage and track all support tickets</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Link href="/admin">
+                  <Button variant="outline" size="sm" className="cursor-pointer">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Admin
+                  </Button>
+                </Link>
+                <Link href="/tickets/create">
+                  <Button className="cursor-pointer">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Ticket
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-          <Card className={`p-4 cursor-pointer transition-all hover:shadow-md ${filters.status === "" ? "ring-2 ring-blue-500 bg-blue-50" : ""}`} onClick={() => handleCardClick("status", "")}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-lg font-bold">{tickets.length}</p>
-              </div>
-              <TicketIcon className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </Card>
-
-          <Card className={`p-4 cursor-pointer transition-all hover:shadow-md ${filters.status === "Open" ? "ring-2 ring-blue-500 bg-blue-50" : ""}`} onClick={() => handleCardClick("status", "Open")}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Open</p>
-                <p className="text-lg font-bold">{getStatusCount("Open")}</p>
-              </div>
-              <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-            </div>
-          </Card>
-
-          <Card className={`p-4 cursor-pointer transition-all hover:shadow-md ${filters.status === "In Progress" ? "ring-2 ring-purple-500 bg-purple-50" : ""}`} onClick={() => handleCardClick("status", "In Progress")}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">In Progress</p>
-                <p className="text-lg font-bold">{getStatusCount("In Progress")}</p>
-              </div>
-              <div className="h-3 w-3 rounded-full bg-purple-500"></div>
-            </div>
-          </Card>
-
-          <Card className={`p-4 cursor-pointer transition-all hover:shadow-md ${filters.status === "Resolved" ? "ring-2 ring-green-500 bg-green-50" : ""}`} onClick={() => handleCardClick("status", "Resolved")}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Resolved</p>
-                <p className="text-lg font-bold text-green-600">{getStatusCount("Resolved")}</p>
-              </div>
-              <div className="h-3 w-3 rounded-full bg-green-500"></div>
-            </div>
-          </Card>
-
-          <Card className={`p-4 cursor-pointer transition-all hover:shadow-md ${filters.dateRange === "overdue" ? "ring-2 ring-red-500 bg-red-50" : ""}`} onClick={() => handleCardClick("dateRange", "overdue")}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Overdue</p>
-                <p className="text-lg font-bold text-red-600">{getOverdueCount()}</p>
-              </div>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Main Content - Takes remaining height */}
-      <div className={`flex-1 px-8 ${showBulkActions ? "pb-24" : "pb-8"}`}>
-        <Card className="h-full flex flex-col shadow-sm">
-          <CardHeader className="flex-shrink-0 border-b bg-white">
-            <div className="mb-4">
-              <CardTitle>All Tickets ({filteredTickets.length})</CardTitle>
-              <CardDescription suppressHydrationWarning>
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredTickets.length)} of {filteredTickets.length} tickets
-              </CardDescription>
+        {/* Status Filter Cards */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            {/* Total Card */}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "all" ? "bg-slate-600 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "all" })}>
+              <TicketIcon className="h-4 w-4" />
+              <span className="text-sm font-medium">Total</span>
+              <span className="text-sm font-bold" suppressHydrationWarning>
+                {tickets.length}
+              </span>
             </div>
 
-            {/* Integrated Filters */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input placeholder="Search by client name..." value={filters.search} onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))} className="pl-10 w-64" />
+            {/* Open Card */}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "Open" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "Open" })}>
+              <div className="h-4 w-4 bg-blue-600 rounded-full flex items-center justify-center">
+                <div className="h-2 w-2 bg-white rounded-full"></div>
               </div>
+              <span className="text-sm font-medium">Open</span>
+              <span className="text-sm font-bold" suppressHydrationWarning>
+                {getStatusCount("Open")}
+              </span>
+            </div>
 
-              <Select value={filters.department || "all"} onValueChange={(value) => setFilters((prev) => ({ ...prev, department: value === "all" ? "" : value }))}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All Departments" />
+            {/* Overdue Card */}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "Overdue" ? "bg-red-500 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "Overdue" })}>
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm font-medium">Overdue</span>
+              <span className="text-sm font-bold" suppressHydrationWarning>
+                {getStatusCount("Overdue")}
+              </span>
+            </div>
+
+            {/* In Progress Card */}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "In Progress" ? "bg-amber-500 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "In Progress" })}>
+              <div className="h-4 w-4 bg-amber-600 rounded-full flex items-center justify-center">
+                <div className="h-2 w-2 bg-white rounded-full"></div>
+              </div>
+              <span className="text-sm font-medium">In Progress</span>
+              <span className="text-sm font-bold" suppressHydrationWarning>
+                {getStatusCount("In Progress")}
+              </span>
+            </div>
+
+            {/* Resolved Card */}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "Resolved" ? "bg-green-500 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "Resolved" })}>
+              <Check className="h-4 w-4" />
+              <span className="text-sm font-medium">Resolved</span>
+              <span className="text-sm font-bold" suppressHydrationWarning>
+                {getStatusCount("Resolved")}
+              </span>
+            </div>
+          </div>
+
+          {/* Department Navigation */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-900">Departments</h2>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={() => handleScroll("left")} disabled={scrollPosition === 0} className="cursor-pointer">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleScroll("right")} disabled={!canScrollRight} className="cursor-pointer">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex space-x-2 overflow-x-auto scrollbar-hide" id="department-nav">
+              <Button variant={selectedDepartment === "All" ? "default" : "outline"} size="sm" onClick={() => setSelectedDepartment("All")} className="cursor-pointer">
+                All ({tickets.length})
+              </Button>
+              {departments.map((dept) => (
+                <Button key={dept.id} variant={selectedDepartment === dept.name ? "default" : "outline"} size="sm" onClick={() => setSelectedDepartment(dept.name)} className="cursor-pointer">
+                  {dept.name} ({tickets.filter((t) => t.department === dept.name).length})
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          {showBulkActions && (
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">{selectedTickets.size} ticket(s) selected</span>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => handleBulkAction("updateStatus")} className="cursor-pointer">
+                      Mark as Resolved
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setConfirmationAction({ type: "delete", ticketId: Array.from(selectedTickets)[0] });
+                        setShowConfirmation(true);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      Delete Selected
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Filters Bar */}
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Input placeholder="Search tickets..." value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} className="h-8 w-48 text-xs" />
+
+              {selectedDepartment === "All" && (
+                <Select value={filters.department} onValueChange={(value) => setFilters({ ...filters, department: value })}>
+                  <SelectTrigger className="h-8 w-32 text-xs">
+                    <SelectValue placeholder="Dept" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Depts</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
+                <SelectTrigger className="h-8 w-28 text-xs">
+                  <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filters.status || "all"} onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value === "all" ? "" : value }))}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Open">Open</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Resolved">Resolved</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filters.priority || "all"} onValueChange={(value) => setFilters((prev) => ({ ...prev, priority: value === "all" ? "" : value }))}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Priorities" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="all">All Priority</SelectItem>
                   <SelectItem value="Low">Low</SelectItem>
                   <SelectItem value="Medium">Medium</SelectItem>
                   <SelectItem value="High">High</SelectItem>
@@ -453,246 +502,331 @@ export default function Home() {
                 </SelectContent>
               </Select>
 
-              {hasActiveFilters && (
-                <Button variant="outline" size="sm" onClick={clearFilters} className="h-9 px-3">
-                  <X className="w-3 h-3 mr-1" />
+              <Select value={filters.dateRange} onValueChange={(value) => setFilters({ ...filters, dateRange: value })}>
+                <SelectTrigger className="h-8 w-28 text-xs">
+                  <SelectValue placeholder="Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(filters.search || filters.department !== "all" || filters.status !== "all" || filters.priority !== "all" || filters.dateRange !== "all") && (
+                <Button variant="outline" size="sm" onClick={() => setFilters({ search: "", department: "all", status: "all", priority: "all", dateRange: "all" })} className="h-8 text-xs">
+                  <X className="h-3 w-3 mr-1" />
                   Clear
                 </Button>
               )}
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="flex-1 p-0 overflow-hidden">
-            {filteredTickets.length === 0 ? (
-              <div className="text-center py-8">
-                <TicketIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
-                <p className="text-gray-600 mb-4">{tickets.length === 0 ? "Create your first ticket to get started." : "Try adjusting your filters to see more results."}</p>
-                {tickets.length === 0 && (
-                  <Link href="/tickets/create">
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create First Ticket
-                    </Button>
-                  </Link>
-                )}
+          {/* Tickets Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1400px]">
+                  {/* Header Row */}
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="w-8 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                      {selectedDepartment === "All" && <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>}
+                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket ID</th>
+                      <th className="w-48 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</th>
+                      <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket Type</th>
+                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                      <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SLA</th>
+                      <th className="w-24 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Left</th>
+                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                      <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((ticket) => {
+                      const isOverdueTicket = ticket.status === "Overdue";
+                      const isResolved = ticket.status === "Resolved";
+
+                      return (
+                        <tr key={ticket.id} className={`hover:bg-gray-50 transition-colors ${isOverdueTicket ? "bg-red-50 hover:bg-red-100" : isResolved ? "bg-green-50 hover:bg-green-100" : ""}`}>
+                          <td className="px-3 py-2">
+                            <input type="checkbox" checked={selectedTickets.has(ticket.id)} onChange={(e) => handleTicketSelection(ticket.id, e.target.checked)} className="rounded border-gray-300" />
+                          </td>
+                          {selectedDepartment === "All" && <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{ticket.department}</td>}
+                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                            <button onClick={() => handleTicketIdClick(ticket)} className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
+                              #{getTicketNumber(ticket.id)}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                            {isTextTruncated(ticket.clientName, 150) ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="truncate block max-w-[150px]">{ticket.clientName}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{ticket.clientName}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              ticket.clientName
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                            {isTextTruncated(ticket.ticketType, 120) ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="truncate block max-w-[120px]">{ticket.ticketType}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{ticket.ticketType}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              ticket.ticketType
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-sm whitespace-nowrap">
+                            <Badge variant={getStatusColor(ticket.status)}>{ticket.status}</Badge>
+                          </td>
+                          <td className="px-3 py-2 text-sm whitespace-nowrap">
+                            <Badge variant={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                            <SLADisplay sla={ticket.sla} />
+                          </td>
+                          <td className="px-3 py-2 text-sm whitespace-nowrap" suppressHydrationWarning>
+                            {(() => {
+                              const daysLeft = getDaysUntilDue(ticket.dueDate);
+                              if (daysLeft < 0) {
+                                return <span className="text-red-600 font-medium">Overdue</span>;
+                              } else if (daysLeft === 0) {
+                                return <span className="text-orange-600 font-medium">Due Today</span>;
+                              } else if (daysLeft <= 1) {
+                                return <span className="text-orange-600">{daysLeft}d</span>;
+                              } else if (daysLeft <= 3) {
+                                return <span className="text-yellow-600">{daysLeft}d</span>;
+                              } else {
+                                return <span className="text-green-600">{daysLeft}d</span>;
+                              }
+                            })()}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap" suppressHydrationWarning>
+                            {formatDate(ticket.createdAt)}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap" suppressHydrationWarning>
+                            {formatDate(ticket.dueDate)}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">
+                            <div className="flex space-x-1">
+                              <Link href={`/ticket/${ticket.id}`}>
+                                <Button variant="ghost" size="sm" className="cursor-pointer">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                              <Link href={`/ticket/${ticket.id}/edit`}>
+                                <Button variant="ghost" size="sm" className="cursor-pointer">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setConfirmationAction({ type: "delete", ticketId: ticket.id });
+                                  setShowConfirmation(true);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div className="flex flex-col h-full">
-                {/* Table Container with Scroll */}
-                <div className="flex-1 overflow-auto">
-                  <table className="w-full">
-                    <thead className="sticky top-0 bg-gray-50 border-b z-10">
-                      <tr>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700 w-12">
-                          <input type="checkbox" checked={selectedTickets.size === currentTickets.length && currentTickets.length > 0} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" />
-                        </th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Department</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Type</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Client</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Priority</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Status</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">WD</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Created</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Due Date</th>
-                        <th className="text-left p-3 font-medium text-sm text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {currentTickets.map((ticket) => {
-                        const overdue = isOverdue(ticket.dueDate) && ticket.status !== "Resolved" && ticket.status !== "Rejected";
-                        const hasEdits = ticket.updatedAt.getTime() !== ticket.createdAt.getTime();
+            </CardContent>
+          </Card>
 
-                        return (
-                          <tr key={ticket.id} className={`hover:bg-gray-50 transition-colors ${overdue ? "bg-red-50" : ""}`}>
-                            <td className="p-3">
-                              <input type="checkbox" checked={selectedTickets.has(ticket.id)} onChange={() => handleSelectTicket(ticket.id)} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" />
-                            </td>
-                            <td className="p-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-900">{ticket.department}</span>
-                                {hasEdits && (
-                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                    Edited
-                                  </Badge>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3">
-                              <span className="text-sm text-gray-900 truncate block max-w-[150px]" title={ticket.ticketType}>
-                                {ticket.ticketType}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              {editingTicket === ticket.id && editingField === "clientName" ? (
-                                <div className="flex items-center gap-2">
-                                  <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={handleKeyPress} onBlur={saveEdit} className="h-7 text-sm" autoFocus />
-                                  <Button variant="ghost" size="sm" onClick={saveEdit} className="h-7 w-7 p-0">
-                                    <Check className="w-3 h-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={cancelEditing} className="h-7 w-7 p-0">
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 group">
-                                  <span className="text-sm font-medium text-gray-900">{ticket.clientName}</span>
-                                  <Button variant="ghost" size="sm" onClick={() => startEditing(ticket.id, "clientName", ticket.clientName)} className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Edit2 className="w-3 h-3 text-gray-500" />
-                                  </Button>
-                                </div>
-                              )}
-                            </td>
-                            <td className="p-3">
-                              <Badge className={`${getPriorityColor(ticket.priority)} text-xs`}>{ticket.priority}</Badge>
-                            </td>
-                            <td className="p-3">
-                              {editingTicket === ticket.id && editingField === "status" ? (
-                                <div className="flex items-center gap-2">
-                                  <Select value={editValue} onValueChange={setEditValue}>
-                                    <SelectTrigger className="h-7 text-sm">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Open">Open</SelectItem>
-                                      <SelectItem value="In Progress">In Progress</SelectItem>
-                                      <SelectItem value="Resolved">Resolved</SelectItem>
-                                      <SelectItem value="Rejected">Rejected</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Button variant="ghost" size="sm" onClick={saveEdit} className="h-7 w-7 p-0">
-                                    <Check className="w-3 h-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={cancelEditing} className="h-7 w-7 p-0">
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 group">
-                                  <Badge className={`${getStatusColor(ticket.status)} text-xs`}>{ticket.status}</Badge>
-                                  <Button variant="ghost" size="sm" onClick={() => startEditing(ticket.id, "status", ticket.status)} className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Edit2 className="w-3 h-3 text-gray-500" />
-                                  </Button>
-                                </div>
-                              )}
-                            </td>
-                            <td className="p-3">
-                              <span className="text-sm text-gray-900 font-mono">{ticket.workingDays}</span>
-                            </td>
-                            <td className="p-3">
-                              <span className="text-sm text-gray-900" suppressHydrationWarning>
-                                {formatDate(ticket.createdAt)}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <div className="flex items-center gap-1">
-                                <span className={`text-sm ${overdue ? "text-red-600 font-medium" : "text-gray-900"}`} suppressHydrationWarning>
-                                  {formatDate(ticket.dueDate)}
-                                </span>
-                                {overdue && <AlertTriangle className="w-3 h-3 text-red-500" />}
-                              </div>
-                            </td>
-                            <td className="p-3">
-                              <div className="flex gap-1">
-                                <Link href={`/ticket?id=${ticket.id}&mode=view`}>
-                                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs hover:bg-gray-100">
-                                    View
-                                  </Button>
-                                </Link>
-                                <Link href={`/ticket?id=${ticket.id}&mode=edit`}>
-                                  <Button variant="outline" size="sm" className="h-7 px-2 text-xs hover:bg-gray-100">
-                                    Edit
-                                  </Button>
-                                </Link>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex-shrink-0 flex items-center justify-between p-4 border-t bg-gray-50">
-                    <div className="text-sm text-gray-600" suppressHydrationWarning>
-                      Page {currentPage} of {totalPages}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}>
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+          {/* Pagination */}
+          {filteredTickets.length > itemsPerPage && (
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm text-gray-700" suppressHydrationWarning>
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTickets.length)} of {filteredTickets.length} results
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bottom Navigation Bar */}
-      {showBulkActions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white p-4 shadow-lg z-50">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex items-center gap-4">
-              <div className="px-3 py-1 bg-gray-700 rounded-full text-sm font-medium" suppressHydrationWarning>
-                {selectedTickets.size} selected
-              </div>
-              <div className="flex items-center gap-3">
-                <Select onValueChange={handleBulkUpdateStatus}>
-                  <SelectTrigger className="w-40 h-9 bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Update Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Resolved">Resolved</SelectItem>
-                    <SelectItem value="Rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Popover open={showCalendar} onOpenChange={setShowCalendar}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 bg-gray-800 border-gray-600 text-white hover:bg-gray-700">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Push Due Date
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-gray-800 border-gray-600" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={selectedDate ? new Date(selectedDate) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          setSelectedDate(date.toISOString().split("T")[0]);
-                          handleBulkPushDueDate(date.toISOString().split("T")[0]);
-                        }
-                      }}
-                      disabled={(date) => date < new Date()}
-                      className="bg-gray-800 text-white"
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                <Button variant="outline" size="sm" onClick={handleBulkDelete} className="h-9 bg-gray-800 border-gray-600 text-red-400 hover:bg-red-900 hover:text-red-300">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
+                  Previous
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(Math.ceil(filteredTickets.length / itemsPerPage), currentPage + 1))} disabled={currentPage === Math.ceil(filteredTickets.length / itemsPerPage)}>
+                  Next
                 </Button>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={clearSelection} className="h-9 w-9 p-0 text-gray-400 hover:text-white hover:bg-gray-700">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          )}
         </div>
-      )}
-    </div>
+
+        {/* Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showConfirmation}
+          onClose={() => {
+            setShowConfirmation(false);
+            setConfirmationAction(null);
+          }}
+          onConfirm={() => {
+            if (confirmationAction?.type === "delete") {
+              handleDeleteTicket(confirmationAction.ticketId);
+            }
+          }}
+          title="Confirm Action"
+          description={`Are you sure you want to ${confirmationAction?.type === "delete" ? "delete" : "update"} this ticket?`}
+          variant="destructive"
+        />
+
+        {/* Ticket Details Modal */}
+        {showTicketModal && selectedTicketForModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-gray-900">Ticket #{getTicketNumber(selectedTicketForModal.id)}</h2>
+                    <Badge className={getStatusColor(selectedTicketForModal.status)}>{selectedTicketForModal.status}</Badge>
+                    {selectedTicketForModal.status === "Overdue" && (
+                      <Badge variant="destructive">
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        Overdue
+                      </Badge>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setShowTicketModal(false)} className="text-gray-500 hover:text-gray-700 cursor-pointer">
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                {/* Ticket Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Department</label>
+                      <p className="text-sm text-gray-900">{selectedTicketForModal.department}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Ticket Type</label>
+                      <p className="text-sm text-gray-900">{selectedTicketForModal.ticketType}</p>
+                    </div>
+                    {selectedTicketForModal.subCategory && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Sub-Category</label>
+                        <p className="text-sm text-gray-900">{selectedTicketForModal.subCategory}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Client Name</label>
+                      <p className="text-sm text-gray-900">{selectedTicketForModal.clientName}</p>
+                    </div>
+                    {selectedTicketForModal.unitId && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Unit ID</label>
+                        <p className="text-sm text-gray-900">{selectedTicketForModal.unitId}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Ticket Owner</label>
+                      <p className="text-sm text-gray-900">{selectedTicketForModal.ticketOwner}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Priority</label>
+                      <Badge className={getPriorityColor(selectedTicketForModal.priority)}>{selectedTicketForModal.priority}</Badge>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">SLA</label>
+                      <p className="text-sm text-gray-900">
+                        <SLADisplay sla={selectedTicketForModal.sla} />
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Created</label>
+                      <p className="text-sm text-gray-900" suppressHydrationWarning>
+                        {formatDate(selectedTicketForModal.createdAt)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Due Date</label>
+                      <p className={`text-sm ${isOverdue(selectedTicketForModal.dueDate) ? "text-red-600 font-medium" : "text-gray-900"}`} suppressHydrationWarning>
+                        {formatDate(selectedTicketForModal.dueDate)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Days Left</label>
+                      <p className={`text-sm font-medium ${getDaysUntilDue(selectedTicketForModal.dueDate) < 0 ? "text-red-600" : getDaysUntilDue(selectedTicketForModal.dueDate) <= 1 ? "text-orange-600" : "text-green-600"}`}>
+                        {(() => {
+                          const daysLeft = getDaysUntilDue(selectedTicketForModal.dueDate);
+                          if (daysLeft < 0) {
+                            return `${Math.abs(daysLeft)} days overdue`;
+                          } else if (daysLeft === 0) {
+                            return "Due today";
+                          } else {
+                            return `${daysLeft} days remaining`;
+                          }
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedTicketForModal.description && (
+                  <div className="mb-6">
+                    <label className="text-sm font-medium text-gray-600">Description</label>
+                    <div className="mt-2 p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedTicketForModal.description}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                  <Link href={`/ticket?id=${selectedTicketForModal.id}`}>
+                    <Button>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Full Details
+                    </Button>
+                  </Link>
+                  <Link href={`/ticket?id=${selectedTicketForModal.id}&mode=edit`}>
+                    <Button variant="outline" className="cursor-pointer">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Ticket
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowTicketModal(false);
+                      setConfirmationAction({ type: "delete", ticketId: selectedTicketForModal.id });
+                      setShowConfirmation(true);
+                    }}
+                    className="text-red-600 hover:text-red-700 cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

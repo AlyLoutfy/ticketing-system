@@ -7,83 +7,61 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { storage, Ticket, Department } from "@/lib/storage";
 import { formatDate, getPriorityColor, getStatusColor, isOverdue, getDaysUntilDue } from "@/lib/utils/date-calculator";
-import { Plus, Search, Filter, Edit, Eye, Calendar, AlertTriangle } from "lucide-react";
+import { SLADisplay } from "@/components/ui/sla-display";
+import { Plus, Search, Filter, Edit, Eye, Calendar, AlertTriangle, Trash2 } from "lucide-react";
 import Link from "next/link";
+
+// Helper function to check if text is truncated
+const isTextTruncated = (text: string, maxWidth: number) => {
+  // Rough estimation: average character width is about 8px, so we calculate approximate width
+  const estimatedWidth = text.length * 8;
+  return estimatedWidth > maxWidth;
+};
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
-
-  const [filters, setFilters] = useState({
-    search: "",
-    department: "",
-    status: "",
-    priority: "",
-  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        await storage.init();
+        const [ticketsData, departmentsData] = await Promise.all([storage.getTickets(), storage.getDepartments()]);
+        setTickets(ticketsData);
+        setDepartments(departmentsData);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadData();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [tickets, filters]);
+  const filteredTickets = tickets.filter((ticket) => {
+    const matchesSearch = ticket.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || ticket.ticketType.toLowerCase().includes(searchTerm.toLowerCase()) || (ticket.description && ticket.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = !statusFilter || statusFilter === "all" || ticket.status === statusFilter;
+    const matchesDepartment = !departmentFilter || departmentFilter === "all" || ticket.department === departmentFilter;
+    return matchesSearch && matchesStatus && matchesDepartment;
+  });
 
-  const loadData = async () => {
-    try {
-      await storage.init();
-      const [ticketsData, departmentsData] = await Promise.all([storage.getTickets(), storage.getDepartments()]);
-      setTickets(ticketsData);
-      setDepartments(departmentsData);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setLoading(false);
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (confirm("Are you sure you want to delete this ticket?")) {
+      try {
+        await storage.deleteTicket(ticketId);
+        setTickets(tickets.filter((t) => t.id !== ticketId));
+      } catch (error) {
+        console.error("Error deleting ticket:", error);
+      }
     }
-  };
-
-  const applyFilters = () => {
-    let filtered = [...tickets];
-
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter((ticket) => ticket.clientName.toLowerCase().includes(searchLower) || ticket.id.toLowerCase().includes(searchLower) || ticket.ticketType.toLowerCase().includes(searchLower));
-    }
-
-    if (filters.department) {
-      filtered = filtered.filter((ticket) => ticket.department === filters.department);
-    }
-
-    if (filters.status) {
-      filtered = filtered.filter((ticket) => ticket.status === filters.status);
-    }
-
-    if (filters.priority) {
-      filtered = filtered.filter((ticket) => ticket.priority === filters.priority);
-    }
-
-    setFilteredTickets(filtered);
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      search: "",
-      department: "",
-      status: "",
-      priority: "",
-    });
-  };
-
-  const getOverdueCount = () => {
-    return tickets.filter((ticket) => ticket.status !== "Resolved" && ticket.status !== "Rejected" && isOverdue(ticket.dueDate)).length;
-  };
-
-  const getStatusCount = (status: string) => {
-    return tickets.filter((ticket) => ticket.status === status).length;
   };
 
   if (loading) {
@@ -100,218 +78,262 @@ export default function TicketsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Tickets</h1>
-          <p className="text-gray-600 mt-2">Manage and track all tickets</p>
+    <TooltipProvider>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Tickets</h1>
+            <p className="text-gray-600 mt-2">Manage and track all tickets</p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/admin">
+              <Button variant="outline" size="sm">
+                <Filter className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+            </Link>
+            <Link href="/tickets/create">
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Ticket
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Link href="/admin">
-            <Button variant="outline">Admin Panel</Button>
-          </Link>
-          <Link href="/tickets/create">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Ticket
-            </Button>
-          </Link>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" suppressHydrationWarning>
+                {tickets.length}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{tickets.filter((t) => t.status === "Open").length}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+              <Edit className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{tickets.filter((t) => t.status === "In Progress").length}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{tickets.filter((t) => t.status === "Resolved").length}</div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+            <CardDescription>Filter tickets by various criteria</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tickets.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open</CardTitle>
-            <div className="h-4 w-4 rounded-full bg-blue-500"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getStatusCount("Open")}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <div className="h-4 w-4 rounded-full bg-purple-500"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getStatusCount("In Progress")}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{getOverdueCount()}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input placeholder="Search tickets..." value={filters.search} onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))} className="pl-10" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input placeholder="Search tickets..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="Open">Open</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Resolved">Resolved</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Department</label>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All departments</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <Select value={filters.department} onValueChange={(value) => setFilters((prev) => ({ ...prev, department: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.name}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Tickets Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Tickets <span suppressHydrationWarning>({filteredTickets.length})</span>
+            </CardTitle>
+            <CardDescription suppressHydrationWarning>
+              Showing {filteredTickets.length} of {tickets.length} tickets
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filteredTickets.length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
+                <p className="text-gray-600 mb-4" suppressHydrationWarning>
+                  {tickets.length === 0 ? "Get started by creating your first ticket." : "Try adjusting your filters to see more results."}
+                </p>
+                {tickets.length === 0 && (
+                  <Link href="/tickets/create">
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create First Ticket
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-48">Client Name</TableHead>
+                      <TableHead className="w-48">Ticket Type</TableHead>
+                      <TableHead className="w-32">Status</TableHead>
+                      <TableHead className="w-32">Priority</TableHead>
+                      <TableHead className="w-32">SLA</TableHead>
+                      <TableHead className="w-32">Days Left</TableHead>
+                      <TableHead className="w-32">Created</TableHead>
+                      <TableHead className="w-32">Due Date</TableHead>
+                      <TableHead className="w-24">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTickets.map((ticket) => {
+                      const overdue = isOverdue(ticket.dueDate);
+                      const daysLeft = getDaysUntilDue(ticket.dueDate);
+                      const priorityColor = getPriorityColor(ticket.priority);
+                      const statusColor = getStatusColor(ticket.status);
 
-            <Select value={filters.status} onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
-                <SelectItem value="Open">Open</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Resolved">Resolved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filters.priority} onValueChange={(value) => setFilters((prev) => ({ ...prev, priority: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Priorities" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Priorities</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-                <SelectItem value="Critical">Critical</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" onClick={clearFilters}>
-              Clear Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tickets Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tickets ({filteredTickets.length})</CardTitle>
-          <CardDescription>
-            Showing {filteredTickets.length} of {tickets.length} tickets
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredTickets.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
-              <p className="text-gray-600 mb-4">{tickets.length === 0 ? "Get started by creating your first ticket." : "Try adjusting your filters to see more results."}</p>
-              {tickets.length === 0 && (
-                <Link href="/tickets/create">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create First Ticket
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ticket ID</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>WD</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets.map((ticket) => {
-                    const daysUntilDue = getDaysUntilDue(ticket.dueDate);
-                    const overdue = isOverdue(ticket.dueDate) && ticket.status !== "Resolved" && ticket.status !== "Rejected";
-
-                    return (
-                      <TableRow key={ticket.id} className={overdue ? "bg-red-50" : ""}>
-                        <TableCell className="font-mono text-sm">{ticket.id.slice(-8)}</TableCell>
-                        <TableCell>{ticket.department}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{ticket.ticketType}</TableCell>
-                        <TableCell>{ticket.clientName}</TableCell>
-                        <TableCell>
-                          <Badge className={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(ticket.status)}>{ticket.status}</Badge>
-                        </TableCell>
-                        <TableCell>{ticket.workingDays}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className={overdue ? "text-red-600 font-medium" : ""}>{formatDate(ticket.dueDate)}</span>
-                            {overdue && <AlertTriangle className="w-4 h-4 text-red-500" />}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Link href={`/tickets/${ticket.id}`}>
-                              <Button variant="outline" size="sm">
-                                <Eye className="w-4 h-4" />
+                      return (
+                        <TableRow key={ticket.id}>
+                          <TableCell>
+                            {isTextTruncated(ticket.clientName, 200) ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="truncate block max-w-[200px]">{ticket.clientName}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{ticket.clientName}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="truncate block max-w-[200px]">{ticket.clientName}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isTextTruncated(ticket.ticketType, 200) ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="truncate block max-w-[200px]">{ticket.ticketType}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{ticket.ticketType}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="truncate block max-w-[200px]">{ticket.ticketType}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={statusColor}>
+                              {ticket.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={priorityColor}>
+                              {ticket.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <SLADisplay sla={ticket.sla} />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <div className={`w-2 h-2 rounded-full ${daysLeft < 0 ? "bg-red-500" : daysLeft <= 1 ? "bg-orange-500" : daysLeft <= 3 ? "bg-yellow-500" : "bg-green-500"}`}></div>
+                              <span className={`text-sm font-medium ${daysLeft < 0 ? "text-red-600" : daysLeft <= 1 ? "text-orange-600" : daysLeft <= 3 ? "text-yellow-600" : "text-green-600"}`}>{daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-gray-900" suppressHydrationWarning>
+                              {formatDate(ticket.createdAt)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <span className={`text-sm ${overdue ? "text-red-600 font-medium" : "text-gray-900"}`} suppressHydrationWarning>
+                                {formatDate(ticket.dueDate)}
+                              </span>
+                              {overdue && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Link href={`/ticket/${ticket.id}`}>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              </Link>
+                              <Link href={`/ticket/${ticket.id}/edit`}>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </Link>
+                              <Button variant="ghost" size="sm" onClick={() => handleDeleteTicket(ticket.id)} className="text-red-600 hover:text-red-700">
+                                <Trash2 className="w-4 h-4" />
                               </Button>
-                            </Link>
-                            <Link href={`/tickets/${ticket.id}/edit`}>
-                              <Button variant="outline" size="sm">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            </Link>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </TooltipProvider>
   );
 }

@@ -5,67 +5,106 @@
       {
         "name": "Security escalation",
         "defaultWD": 5,
-        "description": "Lack of security - safety"
+        "description": "Lack of security - safety",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Security Issues",
         "defaultWD": 5,
-        "description": "Access permission"
+        "description": "Access permission",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Secuirty escalation",
         "defaultWD": 5,
-        "description": "security hazard"
+        "description": "security hazard",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "CM SLA",
         "defaultWD": 5,
-        "description": "FM SLA"
+        "description": "FM SLA",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "8WD_Comp_1WD_Milestone_2HReview",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "6WD_Comp_1WD_Milestone_2HReview",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "2WD_Comp_1WD_Milestone_2HReview",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Call Center Automatic Replies (Client to send his request on Cm@Imkan.eg)",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Communication",
+        "sla": "5 Working Days",
+        "priority": "Low"
       },
       {
         "name": "10WD_Comp_1WD_Milestone_2HReview",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "1 WD",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "9WD_Comp_1WD_Milestone_2HReview",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "7WD_Comp_1WD_Milestone_2HReview",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "7WD_Comp_2WD_Milestone_2HReview",
         "defaultWD": 5,
-        "description": "7WD_Comp_1WD_Milestone_2HReview"
+        "description": "7WD_Comp_1WD_Milestone_2HReview",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       }
     ]
   },
@@ -75,147 +114,234 @@
       {
         "name": "General Inquiry",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Low"
       },
       {
         "name": "Postpone Installement",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Rescheduling",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Request Type",
         "defaultWD": 5,
-        "description": "Sub type"
+        "description": "Sub type",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Incoming Payments",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Delay Penalty / Financial Status",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Handover / Early HO",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Delay Penalty Waiver",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Cash discount",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Update Info",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Cheque recall",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Receiving recalled cheques",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Postpone 10% Installement",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Cheque Replacement",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Milestones",
         "defaultWD": 5,
-        "description": "Department"
+        "description": "Department",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "First contact",
         "defaultWD": 5,
-        "description": "Collection"
+        "description": "Collection",
+        "subCategory": "Communication",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Client Notification",
         "defaultWD": 5,
-        "description": "Collection"
+        "description": "Collection",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "payment settlement",
         "defaultWD": 5,
-        "description": "Finance"
+        "description": "Finance",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Financial Status/ Penalty sheet",
         "defaultWD": 5,
-        "description": "Finance"
+        "description": "Finance",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Management Approval",
         "defaultWD": 5,
-        "description": "Management"
+        "description": "Management",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Discount Scenario",
         "defaultWD": 5,
-        "description": "Business Development"
+        "description": "Business Development",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "New Cheques Submission",
         "defaultWD": 5,
-        "description": "Client"
+        "description": "Client",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "(we need a pop up to open this or not according to the case )",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Department",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Recalling Cheques",
         "defaultWD": 5,
-        "description": "Finance"
+        "description": "Finance",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "No milestone",
         "defaultWD": 5,
-        "description": "Collection"
+        "description": "Collection",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Rescheduling Scenario",
         "defaultWD": 5,
-        "description": "Finance"
+        "description": "Finance",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Client Confirmation",
         "defaultWD": 5,
-        "description": "Client"
+        "description": "Client",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Receipt Issuance",
         "defaultWD": 5,
-        "description": "Finance"
+        "description": "Finance",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "High"
       }
     ]
   },
@@ -225,187 +351,298 @@
       {
         "name": "Contract Signing",
         "defaultWD": 5,
-        "description": "Units contracts signing"
+        "description": "Units contracts signing",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Club membership contract signing",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Contract Delivery",
         "defaultWD": 5,
-        "description": "Club membership contract delivery"
+        "description": "Club membership contract delivery",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Units contracts delivery",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Transfers documents delivery",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Inquiry",
         "defaultWD": 5,
-        "description": "Sales centre Address to deliver"
+        "description": "Sales centre Address to deliver",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Low"
       },
       {
         "name": "Club Membership Inquires",
         "defaultWD": 5,
-        "description": "Club membership inquires to subscribe."
+        "description": "Club membership inquires to subscribe.",
+        "subCategory": "Membership",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Contract Delay",
         "defaultWD": 5,
-        "description": "Unit contract delivery delay"
+        "description": "Unit contract delivery delay",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Transfer Docs delivery delay",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Transfer signing contract delay",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Membership club contract delay",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Request Types",
         "defaultWD": 5,
-        "description": "Priorty"
+        "description": "Priorty",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Signing unit contract",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Overseas Contract",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Contract Modifications",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "signing unit contrct after transfer",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Unit contract",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Club contract",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Transfer docs",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Multiple Delivery Inquiries",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "pending unit contract",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "pending club contract",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Pending Transfer Docs",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Address to sign and deliver",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Unit and club",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Membership",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Club details Info",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Membership",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Subscription Appointment",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Delay Receiving contract",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Handover Visit",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Handover Visit Date",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Receiving Keys Date",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Snag List",
         "defaultWD": 5,
-        "description": "Medium"
+        "description": "Medium",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Keys Delivery (Final Clearance)",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Keys Delivery (Intial Check)",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Early Handover",
         "defaultWD": 5,
-        "description": "Low"
+        "description": "Low",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Delay Snags",
         "defaultWD": 5,
-        "description": "High"
+        "description": "High",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Delay Financial Status",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "High"
       }
     ]
   },
@@ -415,62 +652,98 @@
       {
         "name": "Setting an appointment",
         "defaultWD": 5,
-        "description": "recieveing keys"
+        "description": "recieveing keys",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Rescheduling",
         "defaultWD": 5,
-        "description": "handover visit date"
+        "description": "handover visit date",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Handover Inquiries",
         "defaultWD": 5,
-        "description": "Early handover"
+        "description": "Early handover",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Old Sheet",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "AR Milestone",
         "defaultWD": 5,
-        "description": "Main Ticket Types"
+        "description": "Main Ticket Types",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Follow up",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "10 WD",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Handover Inquires",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Complaint",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Complaints",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Notes",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Keys Delivery (Intial Check)",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Keys Delivery (Final Clearance)",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       }
     ]
   },
@@ -480,32 +753,50 @@
       {
         "name": "Security escalation",
         "defaultWD": 5,
-        "description": "Lack of security - safety"
+        "description": "Lack of security - safety",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Security Issues",
         "defaultWD": 5,
-        "description": "Access permission"
+        "description": "Access permission",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Secuirty escalation",
         "defaultWD": 5,
-        "description": "security hazard"
+        "description": "security hazard",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Request Types",
         "defaultWD": 5,
-        "description": "SLA"
+        "description": "SLA",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Exisiting client selling unit",
         "defaultWD": 5,
-        "description": "1 Working Day"
+        "description": "1 Working Day",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Existing client renting unit",
         "defaultWD": 5,
-        "description": "1 Working Day"
+        "description": "1 Working Day",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       }
     ]
   },
@@ -515,37 +806,58 @@
       {
         "name": "Security issues",
         "defaultWD": 5,
-        "description": "Lack of security - safety"
+        "description": "Lack of security - safety",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Access permission",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "security hazard",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Security",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Sub-Types",
         "defaultWD": 5,
-        "description": "PRIORITY"
+        "description": "PRIORITY",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Request",
         "defaultWD": 5,
-        "description": "Meduim"
+        "description": "Meduim",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Complaint",
         "defaultWD": 5,
-        "description": "Meduim"
+        "description": "Meduim",
+        "subCategory": "Complaints",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Enquiry",
         "defaultWD": 5,
-        "description": "Meduim"
+        "description": "Meduim",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       }
     ]
   },
@@ -555,47 +867,98 @@
       {
         "name": "Club",
         "defaultWD": 5,
-        "description": "Membership process"
+        "description": "Membership process",
+        "subCategory": "Membership",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Gym",
         "defaultWD": 5,
-        "description": "Operation"
+        "description": "Operation",
+        "subCategory": "Operations",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Request Types",
         "defaultWD": 5,
-        "description": "SLA"
+        "description": "SLA",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Low"
       },
       {
         "name": "Membership process",
         "defaultWD": 5,
-        "description": "6 WD"
+        "description": "6 WD",
+        "subCategory": "Membership",
+        "sla": "6 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "ID Cards receival",
         "defaultWD": 5,
-        "description": "1 WD"
+        "description": "1 WD",
+        "subCategory": "Membership",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Manchester City Academy",
         "defaultWD": 5,
-        "description": "1 WD"
+        "description": "1 WD",
+        "subCategory": "Operations",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Padel",
         "defaultWD": 5,
-        "description": "1 WD"
+        "description": "1 WD",
+        "subCategory": "Operations",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Facility and club access",
         "defaultWD": 5,
-        "description": "1 WD"
+        "description": "1 WD",
+        "subCategory": "Security",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Gym operation",
         "defaultWD": 5,
-        "description": "1 WD"
+        "description": "1 WD",
+        "subCategory": "Operations",
+        "sla": "1 Working Day",
+        "priority": "High"
+      },
+      {
+        "name": "Membership Payment Processing",
+        "defaultWD": 3,
+        "description": "Process membership payments",
+        "subCategory": "Finance",
+        "sla": "3 Working Days",
+        "priority": "High"
+      },
+      {
+        "name": "Refund Processing",
+        "defaultWD": 5,
+        "description": "Process membership refunds",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
+      },
+      {
+        "name": "Payment Plan Setup",
+        "defaultWD": 2,
+        "description": "Setup payment plans for memberships",
+        "subCategory": "Finance",
+        "sla": "2 Working Days",
+        "priority": "High"
       }
     ]
   },
@@ -605,252 +968,402 @@
       {
         "name": "WORK PERMIT",
         "defaultWD": 1,
-        "description": "Shutters"
+        "description": "Shutters",
+        "subCategory": "Technical",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Masonry Works",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Gas Boiler",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Paintings / Gypsum Board",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Demolishing Works",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Solar Panels",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Carpentry/ Wooden Cladding",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Penthouse Planter",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "Handover",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Solar Heater",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Flooring Tiles",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Roof Jacuzzi",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Core Opening",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Electricity Works",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Penthouse Roof Separator",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "Handover",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Garden Jacuzzi",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Plumbing Works",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Hardscape Seatings/ Bar",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Rain Shade",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Car Charger",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Cameras",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Kitchen / Furn / AC Installation",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Storage Unit",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Water Features",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Garden Separator",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Roof Pergola",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Garden Pergola",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Car Canopy",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Garden Natural Grass",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Garden Hardscape Walkway",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Hedge Plant/ Boundary",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Garden Planter/ Bar",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Artificial Grass",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Garden Electricity Works",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "Pool Borehole Test",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "Handover",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Pool Excavation",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Pool Flooring RFT Mesh/ Pipes",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Pool Walls RFT Mesh/ Pipes",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Pool Isolation",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Pool Finishing",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Multiple Works",
         "defaultWD": 2,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "SITE VISIT",
         "defaultWD": 2,
-        "description": "Site visit"
+        "description": "Site visit",
+        "subCategory": "Handover",
+        "sla": "2 Working Days",
+        "priority": "High"
       },
       {
         "name": "INSPECTION \"CHEQUE REFUND\"",
         "defaultWD": 3,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "3 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "TECHNICAL INQUIRY",
         "defaultWD": 3,
-        "description": "Construction Updates"
+        "description": "Construction Updates",
+        "subCategory": "Inquiries",
+        "sla": "3 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Work Permit Inquiry",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "Inquiries",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Materials Codes",
         "defaultWD": 3,
-        "description": ""
+        "description": "",
+        "subCategory": "Technical",
+        "sla": "3 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Asbuilt Drawings",
         "defaultWD": 3,
-        "description": ""
+        "description": "",
+        "subCategory": "Technical",
+        "sla": "3 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "PAID SERVICE",
         "defaultWD": 1,
-        "description": "Landscape"
+        "description": "Landscape",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Pergola",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "LICENSE",
         "defaultWD": 1,
-        "description": "Swimming Pool"
+        "description": "Swimming Pool",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       },
       {
         "name": "Elevator",
         "defaultWD": 1,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "1 Working Day",
+        "priority": "High"
       }
     ]
   },
@@ -860,197 +1373,314 @@
       {
         "name": "1. Cancellation",
         "defaultWD": 5,
-        "description": "URF cancellation"
+        "description": "URF cancellation",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "SPA Cancellation",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Club cancellation",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Membership",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "2. Cancel and Transfer",
         "defaultWD": 5,
-        "description": "Cancel and Transfer"
+        "description": "Cancel and Transfer",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "3. CYC",
         "defaultWD": 5,
-        "description": "CYC"
+        "description": "CYC",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "4. Cheques Replacement",
         "defaultWD": 5,
-        "description": "Cheques Replacement"
+        "description": "Cheques Replacement",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "5. Clearance",
         "defaultWD": 5,
-        "description": "Clearance"
+        "description": "Clearance",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "6. DDP",
         "defaultWD": 5,
-        "description": "DDP (Milestone Changed)"
+        "description": "DDP (Milestone Changed)",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "7. Delay Penalty Waiver",
         "defaultWD": 5,
-        "description": "Delay Penalty Waiver"
+        "description": "Delay Penalty Waiver",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "8. Postponing Cheques",
         "defaultWD": 5,
-        "description": "Postpone Installment (Milestone Changed)"
+        "description": "Postpone Installment (Milestone Changed)",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Postpone 10% Installment",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "9. Transfer of Ownership",
         "defaultWD": 5,
-        "description": "Third Party"
+        "description": "Third Party",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "1st Degree Transfer",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Adding Joint Buyer",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Delete Joint Buyer",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Replacing Joint Owner",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Mortgage",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Inheritance",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Resale",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Club Membership Transfer",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "10. Update info",
         "defaultWD": 5,
-        "description": "Email/ Telephone"
+        "description": "Email/ Telephone",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Address",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "11. General Info",
         "defaultWD": 5,
-        "description": "General inforamtion"
+        "description": "General inforamtion",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "12. Recalling Cheques",
         "defaultWD": 5,
-        "description": "Recalling Cheques"
+        "description": "Recalling Cheques",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "13. Refund Cheques",
         "defaultWD": 5,
-        "description": "Refund Cheques"
+        "description": "Refund Cheques",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "14. Delivery Date",
         "defaultWD": 5,
-        "description": "Delivery Date"
+        "description": "Delivery Date",
+        "subCategory": "Contracts",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "15, Apology Letter",
         "defaultWD": 5,
-        "description": "Apology Letter"
+        "description": "Apology Letter",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "16. Post Dated Cheques",
         "defaultWD": 5,
-        "description": "PDCs"
+        "description": "PDCs",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "PDC's post handover",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "17. Complaints",
         "defaultWD": 5,
-        "description": "Complain"
+        "description": "Complain",
+        "subCategory": "Complaints",
+        "sla": "5 Working Days",
+        "priority": "High"
       },
       {
         "name": "Internal department complain",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Complaints",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "18. Others",
         "defaultWD": 5,
-        "description": "Others"
+        "description": "Others",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "19. Rescheduling (On Hold)",
         "defaultWD": 5,
-        "description": "Rescheduling"
+        "description": "Rescheduling",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "20. Cashback (On Hold)",
         "defaultWD": 5,
-        "description": "Cashback"
+        "description": "Cashback",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "21. Downgrade (On Hold)",
         "defaultWD": 5,
-        "description": "Downgrade"
+        "description": "Downgrade",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "22. Early HO (On Hold)",
         "defaultWD": 5,
-        "description": "Early HO"
+        "description": "Early HO",
+        "subCategory": "Handover",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "23. Modifications Insurance cheque",
         "defaultWD": 5,
-        "description": "Receiving Modifications Insurance cheque"
+        "description": "Receiving Modifications Insurance cheque",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Refundung Modifications Insurance cheque",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Additonal Change",
         "defaultWD": 5,
-        "description": "Financial Status/ Penalty sheet"
+        "description": "Financial Status/ Penalty sheet",
+        "subCategory": "Finance",
+        "sla": "5 Working Days",
+        "priority": "High"
       }
     ]
   },
@@ -1060,117 +1690,396 @@
       {
         "name": "FM Related",
         "defaultWD": 5,
-        "description": "to be left blank only for FM"
+        "description": "to be left blank only for FM",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Service Category",
         "defaultWD": 5,
-        "description": "Incident Category"
+        "description": "Incident Category",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "1- Maintenance Works",
         "defaultWD": 5,
-        "description": "Plumbing"
+        "description": "Plumbing",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Electricity",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Carpentry",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Aluminum",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "PC/ Pest control",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "2-Installation Works",
         "defaultWD": 5,
-        "description": "Aluminum Works"
+        "description": "Aluminum Works",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Irrigation Paid Service",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "PC Paid Service",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Electrical Works",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Carpentry Works",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Plumbing Works",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "A/C Works",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Ceramic / Marble Works",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Painting Works",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "HK Paid Service",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "Landscape Paid Service",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "3-Inquries",
         "defaultWD": 5,
-        "description": "Civil Inquriy"
+        "description": "Civil Inquriy",
+        "subCategory": "General",
+        "sla": "5 Working Days",
+        "priority": "Medium"
       },
       {
         "name": "MEP Inquiry",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Low"
       },
       {
         "name": "HK services Inquiry",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Low"
       },
       {
         "name": "Landscape Inquiry",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Low"
       },
       {
         "name": "Pest Control Services Inquiry",
         "defaultWD": 5,
-        "description": ""
+        "description": "",
+        "subCategory": "Inquiries",
+        "sla": "5 Working Days",
+        "priority": "Low"
+      }
+    ]
+  },
+  {
+    "name": "Human Resources",
+    "ticketTypes": [
+      {
+        "name": "Employee Onboarding",
+        "defaultWD": 5,
+        "description": "Process new employee onboarding",
+        "subCategory": "Administrative",
+        "sla": "5 Working Days",
+        "priority": "High"
+      },
+      {
+        "name": "Payroll Processing",
+        "defaultWD": 3,
+        "description": "Handle payroll related issues",
+        "subCategory": "Finance",
+        "sla": "3 Working Days",
+        "priority": "Critical"
+      }
+    ]
+  },
+  {
+    "name": "Legal Affairs",
+    "ticketTypes": [
+      {
+        "name": "Contract Review",
+        "defaultWD": 7,
+        "description": "Review legal contracts",
+        "subCategory": "Legal",
+        "sla": "7 Working Days",
+        "priority": "High"
+      },
+      {
+        "name": "Compliance Check",
+        "defaultWD": 5,
+        "description": "Ensure compliance with regulations",
+        "subCategory": "Legal",
+        "sla": "5 Working Days",
+        "priority": "Medium"
+      }
+    ]
+  },
+  {
+    "name": "Marketing",
+    "ticketTypes": [
+      {
+        "name": "Campaign Management",
+        "defaultWD": 4,
+        "description": "Manage marketing campaigns",
+        "subCategory": "Marketing",
+        "sla": "4 Working Days",
+        "priority": "Medium"
+      },
+      {
+        "name": "Brand Guidelines",
+        "defaultWD": 3,
+        "description": "Brand compliance and guidelines",
+        "subCategory": "Marketing",
+        "sla": "3 Working Days",
+        "priority": "Low"
+      }
+    ]
+  },
+  {
+    "name": "Sales",
+    "ticketTypes": [
+      {
+        "name": "Lead Management",
+        "defaultWD": 2,
+        "description": "Process sales leads",
+        "subCategory": "Sales",
+        "sla": "2 Working Days",
+        "priority": "High"
+      },
+      {
+        "name": "Customer Follow-up",
+        "defaultWD": 1,
+        "description": "Follow up with customers",
+        "subCategory": "Customer Service",
+        "sla": "1 Working Day",
+        "priority": "High"
+      }
+    ]
+  },
+  {
+    "name": "Customer Service",
+    "ticketTypes": [
+      {
+        "name": "Support Ticket",
+        "defaultWD": 2,
+        "description": "General customer support",
+        "subCategory": "Customer Service",
+        "sla": "2 Working Days",
+        "priority": "High"
+      },
+      {
+        "name": "Complaint Resolution",
+        "defaultWD": 3,
+        "description": "Resolve customer complaints",
+        "subCategory": "Complaints",
+        "sla": "3 Working Days",
+        "priority": "Critical"
+      }
+    ]
+  },
+  {
+    "name": "IT Support",
+    "ticketTypes": [
+      {
+        "name": "System Maintenance",
+        "defaultWD": 4,
+        "description": "Regular system maintenance",
+        "subCategory": "Technical",
+        "sla": "4 Working Days",
+        "priority": "Medium"
+      },
+      {
+        "name": "Software Installation",
+        "defaultWD": 2,
+        "description": "Install new software",
+        "subCategory": "Technical",
+        "sla": "2 Working Days",
+        "priority": "High"
+      }
+    ]
+  },
+  {
+    "name": "Facilities Management",
+    "ticketTypes": [
+      {
+        "name": "Building Maintenance",
+        "defaultWD": 5,
+        "description": "General building maintenance",
+        "subCategory": "Maintenance",
+        "sla": "5 Working Days",
+        "priority": "Medium"
+      },
+      {
+        "name": "Cleaning Services",
+        "defaultWD": 1,
+        "description": "Cleaning and janitorial services",
+        "subCategory": "Maintenance",
+        "sla": "1 Working Day",
+        "priority": "Low"
+      }
+    ]
+  },
+  {
+    "name": "Procurement",
+    "ticketTypes": [
+      {
+        "name": "Vendor Management",
+        "defaultWD": 3,
+        "description": "Manage vendor relationships",
+        "subCategory": "Administrative",
+        "sla": "3 Working Days",
+        "priority": "Medium"
+      },
+      {
+        "name": "Purchase Orders",
+        "defaultWD": 2,
+        "description": "Process purchase orders",
+        "subCategory": "Finance",
+        "sla": "2 Working Days",
+        "priority": "High"
+      }
+    ]
+  },
+  {
+    "name": "Quality Assurance",
+    "ticketTypes": [
+      {
+        "name": "Quality Inspection",
+        "defaultWD": 4,
+        "description": "Quality control inspections",
+        "subCategory": "Technical",
+        "sla": "4 Working Days",
+        "priority": "High"
+      },
+      {
+        "name": "Process Improvement",
+        "defaultWD": 7,
+        "description": "Improve existing processes",
+        "subCategory": "Administrative",
+        "sla": "7 Working Days",
+        "priority": "Medium"
+      }
+    ]
+  },
+  {
+    "name": "Research & Development",
+    "ticketTypes": [
+      {
+        "name": "Product Development",
+        "defaultWD": 10,
+        "description": "Develop new products",
+        "subCategory": "Technical",
+        "sla": "10 Working Days",
+        "priority": "Medium"
+      },
+      {
+        "name": "Market Research",
+        "defaultWD": 5,
+        "description": "Conduct market research",
+        "subCategory": "Marketing",
+        "sla": "5 Working Days",
+        "priority": "Low"
       }
     ]
   }

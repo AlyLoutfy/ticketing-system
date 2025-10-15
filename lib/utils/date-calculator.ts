@@ -1,4 +1,4 @@
-import { addDays, format, isWeekend } from 'date-fns';
+import { addDays, isWeekend } from "date-fns";
 
 /**
  * Calculate working days (excluding weekends)
@@ -9,16 +9,16 @@ import { addDays, format, isWeekend } from 'date-fns';
 export function calculateDueDate(startDate: Date, workingDays: number): Date {
   let currentDate = new Date(startDate);
   let daysAdded = 0;
-  
+
   while (daysAdded < workingDays) {
     currentDate = addDays(currentDate, 1);
-    
+
     // Skip weekends (Saturday = 6, Sunday = 0)
     if (!isWeekend(currentDate)) {
       daysAdded++;
     }
   }
-  
+
   return currentDate;
 }
 
@@ -31,14 +31,14 @@ export function calculateDueDate(startDate: Date, workingDays: number): Date {
 export function calculateWorkingDaysBetween(startDate: Date, endDate: Date): number {
   let workingDays = 0;
   let currentDate = new Date(startDate);
-  
+
   while (currentDate <= endDate) {
     if (!isWeekend(currentDate)) {
       workingDays++;
     }
     currentDate = addDays(currentDate, 1);
   }
-  
+
   return workingDays;
 }
 
@@ -50,10 +50,10 @@ export function calculateWorkingDaysBetween(startDate: Date, endDate: Date): num
 export function isOverdue(dueDate: Date): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
-  
+
   return due < today;
 }
 
@@ -65,10 +65,10 @@ export function isOverdue(dueDate: Date): boolean {
 export function getDaysUntilDue(dueDate: Date): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
-  
+
   const diffTime = due.getTime() - today.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
@@ -79,7 +79,12 @@ export function getDaysUntilDue(dueDate: Date): number {
  * @returns Formatted date string
  */
 export function formatDate(date: Date): string {
-  return format(date, 'MMM dd, yyyy');
+  // Use deterministic formatting to avoid hydration mismatch
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = monthNames[date.getMonth()];
+  const day = date.getDate().toString().padStart(2, "0");
+  const year = date.getFullYear();
+  return `${month} ${day}, ${year}`;
 }
 
 /**
@@ -88,7 +93,14 @@ export function formatDate(date: Date): string {
  * @returns Formatted date and time string
  */
 export function formatDateTime(date: Date): string {
-  return format(date, 'MMM dd, yyyy HH:mm');
+  // Use deterministic formatting to avoid hydration mismatch
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = monthNames[date.getMonth()];
+  const day = date.getDate().toString().padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${month} ${day}, ${year} ${hours}:${minutes}`;
 }
 
 /**
@@ -96,18 +108,18 @@ export function formatDateTime(date: Date): string {
  * @param priority - The priority level
  * @returns Tailwind CSS color class
  */
-export function getPriorityColor(priority: string): string {
+export function getPriorityColor(priority: string): "default" | "secondary" | "destructive" | "outline" {
   switch (priority.toLowerCase()) {
-    case 'low':
-      return 'bg-green-100 text-green-800';
-    case 'medium':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'high':
-      return 'bg-orange-100 text-orange-800';
-    case 'critical':
-      return 'bg-red-100 text-red-800';
+    case "low":
+      return "outline";
+    case "medium":
+      return "secondary";
+    case "high":
+      return "default";
+    case "critical":
+      return "destructive";
     default:
-      return 'bg-gray-100 text-gray-800';
+      return "outline";
   }
 }
 
@@ -116,17 +128,19 @@ export function getPriorityColor(priority: string): string {
  * @param status - The status
  * @returns Tailwind CSS color class
  */
-export function getStatusColor(status: string): string {
+export function getStatusColor(status: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status.toLowerCase()) {
-    case 'open':
-      return 'bg-blue-100 text-blue-800';
-    case 'in progress':
-      return 'bg-purple-100 text-purple-800';
-    case 'resolved':
-      return 'bg-green-100 text-green-800';
-    case 'rejected':
-      return 'bg-red-100 text-red-800';
+    case "open":
+      return "default";
+    case "in progress":
+      return "secondary";
+    case "resolved":
+      return "default";
+    case "rejected":
+      return "destructive";
+    case "overdue":
+      return "destructive";
     default:
-      return 'bg-gray-100 text-gray-800';
+      return "outline";
   }
 }
