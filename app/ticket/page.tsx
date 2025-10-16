@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { storage, Ticket, Department } from "@/lib/storage";
-import { parseSLA, calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
+import { calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { formatDateTime, getPriorityColor, getStatusColor, isOverdue, getDaysUntilDue, formatDate } from "@/lib/utils/date-calculator";
 import { ArrowLeft, Edit, Calendar, AlertTriangle, User as UserIcon, Building, Clock, Save } from "lucide-react";
@@ -43,7 +43,7 @@ function TicketPageContent() {
   const [estimatedDueDate, setEstimatedDueDate] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!ticketId) return;
 
     try {
@@ -81,7 +81,7 @@ function TicketPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ticketId, router]);
 
   useEffect(() => {
     setMounted(true);
@@ -90,7 +90,7 @@ function TicketPageContent() {
     } else {
       setLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, loadData]);
 
   useEffect(() => {
     // Calculate due date when ticket type changes

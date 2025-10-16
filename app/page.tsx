@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,20 +94,7 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    console.log("useEffect: setting mounted to true");
-    setMounted(true);
-    console.log("useEffect: calling loadData");
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      applyFilters();
-    }
-  }, [tickets, filters, mounted, selectedDepartment]);
-
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...tickets];
 
     // Apply department filter first
@@ -158,7 +145,20 @@ export default function Home() {
 
     setFilteredTickets(filtered);
     setCurrentPage(1);
-  };
+  }, [tickets, selectedDepartment, filters, mounted]);
+
+  useEffect(() => {
+    console.log("useEffect: setting mounted to true");
+    setMounted(true);
+    console.log("useEffect: calling loadData");
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      applyFilters();
+    }
+  }, [tickets, filters, mounted, selectedDepartment, applyFilters]);
 
   const handleScroll = (direction: "left" | "right") => {
     const container = document.getElementById("department-nav");

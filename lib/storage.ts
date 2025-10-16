@@ -108,7 +108,7 @@ class IndexedDBStorage {
       return this.initPromise;
     }
 
-    this.initPromise = new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve) => {
       // Check if we're in a browser environment
       if (typeof window === "undefined" || !window.indexedDB) {
         console.log("IndexedDB not available, using fallback");

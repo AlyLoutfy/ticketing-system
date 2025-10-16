@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { storage, Department, TicketType, Workflow } from "@/lib/storage";
-import { SLADisplay } from "@/components/ui/sla-display";
 import { WorkflowSLADisplay } from "@/components/ui/workflow-sla-display";
 import { WorkflowSelect } from "@/components/ui/workflow-select";
 import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowLeft } from "lucide-react";

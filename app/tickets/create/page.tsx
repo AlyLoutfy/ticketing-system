@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { storage, Department } from "@/lib/storage";
 import { formatDate, getPriorityColor } from "@/lib/utils/date-calculator";
-import { parseSLA, calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
+import { calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
 import { ArrowLeft, Save, Calendar, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -66,7 +66,8 @@ export default function CreateTicketPage() {
     if (selectedDepartment && formData.ticketType && mounted) {
       const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
       if (ticketType) {
-        const sla = typeof ticketType.sla === "object" ? ticketType.sla : parseSLA(ticketType.sla);
+        // Use defaultWD to create SLA object
+        const sla = { value: ticketType.defaultWD, unit: "days" as const };
         const dueDate = calculateSLADueDate(sla, new Date());
         setEstimatedDueDate(dueDate);
       }
@@ -121,17 +122,17 @@ export default function CreateTicketPage() {
         ticketType: ticketType.name,
         clientName: formData.clientName,
         unitId: formData.unitId,
-        workingDays: typeof ticketType.sla === "object" && ticketType.sla?.unit === "days" ? ticketType.sla.value : ticketType.defaultWD,
+        workingDays: ticketType.defaultWD,
         ticketOwner: formData.ticketOwner,
         description: formData.description,
         status: "Open" as const,
         priority: ticketType.priority,
-        sla: ticketType.sla,
+        sla: { value: ticketType.defaultWD, unit: "days" as const },
         createdAt: now,
         dueDate:
           estimatedDueDate ||
           (() => {
-            const sla = typeof ticketType.sla === "object" ? ticketType.sla : parseSLA(ticketType.sla);
+            const sla = { value: ticketType.defaultWD, unit: "days" as const };
             return calculateSLADueDate(sla, now);
           })(),
       };
