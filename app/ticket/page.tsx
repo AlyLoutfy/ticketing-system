@@ -15,6 +15,7 @@ import { SLADisplay } from "@/components/ui/sla-display";
 import { formatDateTime, getPriorityColor, getStatusColor, isOverdue, getDaysUntilDue, formatDate } from "@/lib/utils/date-calculator";
 import { ArrowLeft, Edit, Calendar, AlertTriangle, User as UserIcon, Building, Clock, Save } from "lucide-react";
 import Link from "next/link";
+import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
 import TicketHistoryComponent from "@/components/TicketHistory";
 
 function TicketPageContent() {
@@ -96,7 +97,8 @@ function TicketPageContent() {
     if (selectedDepartment && formData.ticketType && mounted) {
       const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
       if (ticketType) {
-        const sla = typeof ticketType.sla === "object" ? ticketType.sla : parseSLA(ticketType.sla);
+        // Calculate SLA from workflow if available, otherwise use defaultWD
+        const sla = { value: ticketType.defaultWD, unit: "days" as const };
         const dueDate = calculateSLADueDate(sla, new Date());
         setEstimatedDueDate(dueDate);
       }
@@ -151,10 +153,10 @@ function TicketPageContent() {
         department: selectedDepartment.name,
         ticketType: ticketType.name,
         subCategory: ticketType.subCategory,
-        sla: ticketType.sla,
+        sla: undefined, // SLA is now calculated from workflow
         clientName: formData.clientName.trim(),
         unitId: formData.unitId.trim() || undefined,
-        workingDays: typeof ticketType.sla === "object" && ticketType.sla?.unit === "days" ? ticketType.sla.value : ticketType.defaultWD,
+        workingDays: ticketType.defaultWD, // Use defaultWD since SLA is now calculated from workflow
         priority: ticketType.priority,
         status: formData.status,
         description: formData.description.trim() || undefined,
@@ -163,14 +165,19 @@ function TicketPageContent() {
       console.log("Updating ticket:", { ticketId, updates });
       await storage.updateTicket(ticketId!, updates);
       console.log("Ticket updated successfully");
-      await loadData(); // Reload to get updated data
 
-      // Switch back to view mode
-      router.push(`/ticket?id=${ticketId}&mode=view`);
+      // Show success notification
+      showToast("Ticket updated successfully!", "success");
+
+      // Wait a moment for the toast to show, then redirect
+      setTimeout(() => {
+        console.log("Redirecting to main page...");
+        window.location.href = "/";
+      }, 1500);
     } catch (error) {
       console.error("Error updating ticket:", error);
       console.error("Error details:", error);
-      alert(`Error updating ticket: ${error instanceof Error ? error.message : "Unknown error"}`);
+      showToast(`Error updating ticket: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
     } finally {
       setSubmitting(false);
     }
@@ -384,7 +391,9 @@ function TicketPageContent() {
                       {(() => {
                         const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
                         if (ticketType) {
-                          return <SLADisplay sla={ticketType.sla} />;
+                          // Calculate SLA from workflow if available, otherwise use defaultWD
+                          const sla = { value: ticketType.defaultWD, unit: "days" as const };
+                          return <SLADisplay sla={sla} />;
                         }
                         return "N/A";
                       })()}
@@ -395,7 +404,7 @@ function TicketPageContent() {
                 {selectedDepartment && formData.ticketType && (
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Default WD</Label>
-                    <SLADisplay sla={selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.sla} />
+                    <SLADisplay sla={{ value: selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.defaultWD || 5, unit: "days" as const }} />
                   </div>
                 )}
 
@@ -670,9 +679,11 @@ function TicketPageContent() {
                       onClick={async () => {
                         try {
                           await storage.updateTicket(ticket.id, { status: "Resolved" });
+                          showToast("Ticket marked as resolved!", "success");
                           await loadData();
                         } catch (error) {
                           console.error("Error updating status:", error);
+                          showToast("Error updating ticket status", "error");
                         }
                       }}
                     >
@@ -684,9 +695,11 @@ function TicketPageContent() {
                       onClick={async () => {
                         try {
                           await storage.updateTicket(ticket.id, { status: "Rejected" });
+                          showToast("Ticket marked as rejected!", "success");
                           await loadData();
                         } catch (error) {
                           console.error("Error updating status:", error);
+                          showToast("Error updating ticket status", "error");
                         }
                       }}
                     >
@@ -702,6 +715,9 @@ function TicketPageContent() {
 
       {/* Ticket History */}
       <TicketHistoryComponent ticketId={ticketId} />
+
+      {/* Toast Container */}
+      <ClientToastContainer />
     </div>
   );
 }

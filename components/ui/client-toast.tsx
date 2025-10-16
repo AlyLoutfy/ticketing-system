@@ -66,33 +66,90 @@ export function Toast({ id, title, description, type, duration = 5000, onClose }
   );
 }
 
-// Global toast state
-let globalSetToasts: React.Dispatch<React.SetStateAction<ToastProps[]>> | null = null;
+// Client-side only toast manager
+class ClientToastManager {
+  private toasts: ToastProps[] = [];
+  private listeners: ((toasts: ToastProps[]) => void)[] = [];
+  private mounted = false;
 
-export function showToast(title: string, type: "success" | "error" | "warning" | "info", description?: string) {
-  const id = Date.now().toString();
-  const newToast: ToastProps = { id, title, type, description };
+  mount() {
+    this.mounted = true;
+  }
 
-  console.log("showToast called:", { title, type, description, globalSetToasts: !!globalSetToasts });
+  unmount() {
+    this.mounted = false;
+  }
 
-  if (globalSetToasts) {
-    globalSetToasts((prev) => [...prev, newToast]);
-  } else {
-    console.warn("Toast system not initialized yet");
+  subscribe(listener: (toasts: ToastProps[]) => void) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((listener) => listener([...this.toasts]));
+  }
+
+  show(title: string, type: "success" | "error" | "warning" | "info", description?: string) {
+    console.log("Toast show called:", { title, type, description, mounted: this.mounted });
+
+    if (!this.mounted) {
+      console.warn("Toast system not mounted yet");
+      return;
+    }
+
+    const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const newToast: ToastProps = { id, title, type, description };
+
+    this.toasts.push(newToast);
+    console.log("Toast added, total toasts:", this.toasts.length);
+    this.notify();
+
+    // Auto-remove after duration
+    setTimeout(() => {
+      this.remove(id);
+    }, 5000);
+  }
+
+  remove(id: string) {
+    this.toasts = this.toasts.filter((toast) => toast.id !== id);
+    this.notify();
   }
 }
 
-export function ToastContainer() {
-  const [toasts, setToasts] = useState<ToastProps[]>([]);
+// Global instance
+const toastManager = new ClientToastManager();
 
-  // Set global state
+export function showToast(title: string, type: "success" | "error" | "warning" | "info", description?: string) {
+  toastManager.show(title, type, description);
+}
+
+export function ClientToastContainer() {
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    console.log("ToastContainer mounted, setting global state");
-    globalSetToasts = setToasts;
+    console.log("ClientToastContainer mounting...");
+    setMounted(true);
+    toastManager.mount();
+    console.log("ToastManager mounted");
+
+    const unsubscribe = toastManager.subscribe(setToasts);
+
+    return () => {
+      console.log("ClientToastContainer unmounting...");
+      unsubscribe();
+      toastManager.unmount();
+    };
   }, []);
 
+  if (!mounted) {
+    return null;
+  }
+
   const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    toastManager.remove(id);
   };
 
   return (

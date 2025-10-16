@@ -15,10 +15,6 @@ export interface TicketType {
   defaultWD: number;
   description?: string;
   subCategory?: string;
-  sla: {
-    value: number;
-    unit: "hours" | "days";
-  };
   priority: string;
   workflowId?: string;
   createdAt: Date;
@@ -97,10 +93,11 @@ export interface TicketHistory {
 class IndexedDBStorage {
   private db: IDBDatabase | null = null;
   private dbName = "TicketingSystem";
-  private version = 4;
+  private version = 6;
   private idCounter = 0;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
+  private static instance: IndexedDBStorage;
 
   async init(): Promise<void> {
     if (this.isInitialized) {
@@ -202,6 +199,10 @@ class IndexedDBStorage {
   }
 
   private ensureDB(): IDBDatabase | null {
+    if (!this.isInitialized) {
+      console.log("Database not initialized yet");
+      return null;
+    }
     if (!this.db) {
       console.log("IndexedDB not available, returning null");
       return null;
@@ -211,6 +212,7 @@ class IndexedDBStorage {
 
   // Department operations
   async createDepartment(department: Omit<Department, "id" | "createdAt" | "updatedAt">): Promise<Department> {
+    await this.init();
     const db = this.ensureDB();
     if (!db) {
       throw new Error("IndexedDB not available");
@@ -234,6 +236,7 @@ class IndexedDBStorage {
   }
 
   async getDepartments(): Promise<Department[]> {
+    await this.init();
     const db = this.ensureDB();
     if (!db) {
       return [];
@@ -416,6 +419,7 @@ class IndexedDBStorage {
   }
 
   async getTickets(filters?: { department?: string; status?: string; priority?: string; search?: string }): Promise<Ticket[]> {
+    await this.init();
     const db = this.ensureDB();
     if (!db) {
       return [];
@@ -611,9 +615,17 @@ class IndexedDBStorage {
 
   // Utility methods
   private generateId(): string {
-    // Use a deterministic counter to avoid hydration mismatch
+    // Use a simple counter for server-side consistency
     this.idCounter += 1;
     return `id_${this.idCounter}`;
+  }
+
+  // Singleton pattern to ensure consistent state
+  static getInstance(): IndexedDBStorage {
+    if (!IndexedDBStorage.instance) {
+      IndexedDBStorage.instance = new IndexedDBStorage();
+    }
+    return IndexedDBStorage.instance;
   }
 
   private calculateDueDate(startDate: Date, workingDays: number): Date {
@@ -632,34 +644,20 @@ class IndexedDBStorage {
   }
 
   // Seed data from JSON
-  async seedDepartments(departmentsData: { name: string; ticketTypes: { name: string; defaultWD: number; description?: string; subCategory?: string; sla: string; priority: string }[] }[]): Promise<void> {
+  async seedDepartments(departmentsData: { name: string; ticketTypes: { name: string; defaultWD: number; description?: string; subCategory?: string; priority: string }[] }[]): Promise<void> {
     const existingDepartments = await this.getDepartments();
     if (existingDepartments.length > 0) {
       return;
     }
 
     for (const deptData of departmentsData) {
-      const ticketTypes: TicketType[] = deptData.ticketTypes.map((type: { name: string; defaultWD: number; description?: string; subCategory?: string; sla: string; priority: string }) => {
-        // Convert old SLA string format to new object format
-        let sla: { value: number; unit: "hours" | "days" };
-        if (type.sla.includes("h")) {
-          const value = parseInt(type.sla.replace("h", ""));
-          sla = { value: isNaN(value) ? 5 : value, unit: "hours" };
-        } else if (type.sla.includes("WD") || type.sla.includes("Working Days")) {
-          const value = parseInt(type.sla.replace("WD", "").replace("Working Days", "").trim());
-          sla = { value: isNaN(value) ? 5 : value, unit: "days" };
-        } else {
-          // Default fallback
-          sla = { value: 5, unit: "days" };
-        }
-
+      const ticketTypes: TicketType[] = deptData.ticketTypes.map((type: { name: string; defaultWD: number; description?: string; subCategory?: string; priority: string }) => {
         return {
           id: this.generateId(),
           name: type.name,
           defaultWD: type.defaultWD,
           description: type.description || "",
           subCategory: type.subCategory || "",
-          sla: sla,
           priority: type.priority,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -833,6 +831,7 @@ class IndexedDBStorage {
 
   // Workflow Management
   async createWorkflow(workflow: Omit<Workflow, "id" | "createdAt" | "updatedAt">): Promise<Workflow> {
+    await this.init();
     const db = this.ensureDB();
     if (!db) throw new Error("Database not available");
     const now = new Date();
@@ -854,6 +853,7 @@ class IndexedDBStorage {
   }
 
   async getWorkflows(): Promise<Workflow[]> {
+    await this.init();
     const db = this.ensureDB();
     if (!db) {
       return [];
@@ -996,4 +996,4 @@ class IndexedDBStorage {
 }
 
 // Export singleton instance
-export const storage = new IndexedDBStorage();
+export const storage = IndexedDBStorage.getInstance();

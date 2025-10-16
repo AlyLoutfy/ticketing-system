@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { storage, Department, Workflow, WorkflowStep } from "@/lib/storage";
 import { Plus, Ticket, Edit, Trash2, Save, GripVertical, ArrowLeft, Star, StarOff } from "lucide-react";
 import Link from "next/link";
-import { ToastContainer, showToast } from "@/components/ui/toast";
+import { ClientToastContainer, showToast } from "@/components/ui/client-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
@@ -58,7 +58,16 @@ function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { st
               </SelectContent>
             </Select>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(index)} className="text-red-600 hover:text-red-700 cursor-pointer p-1 h-8 w-8">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(index);
+            }}
+            className="text-red-600 hover:text-red-700 cursor-pointer p-1 h-8 w-8"
+          >
             <Trash2 className="w-3 h-3" />
           </Button>
         </div>
@@ -162,8 +171,9 @@ function WorkflowsPageContent() {
   };
 
   const addWorkflowStep = (department: Department) => {
+    const stepId = `step-${workflowSteps.length + 1}-${Date.now()}`;
     const newStep: WorkflowStep = {
-      id: `step-${Date.now()}`,
+      id: stepId,
       departmentId: department.id,
       departmentName: department.name,
       estimatedDays: 1,
@@ -210,7 +220,7 @@ function WorkflowsPageContent() {
   const handleCreateWorkflow = async () => {
     try {
       if (!workflowFormData.name.trim() || workflowSteps.length === 0) {
-        showToast("Validation Error", "error", "Please provide a name and at least one step");
+        showToast("Please provide a name and at least one step", "error");
         return;
       }
 
@@ -222,12 +232,12 @@ function WorkflowsPageContent() {
       };
 
       await storage.createWorkflow(workflowData);
-      showToast("Success", "success", "Workflow created successfully");
+      showToast("Workflow created successfully!", "success");
       resetForm();
       loadData();
     } catch (error) {
       console.error("Error creating workflow:", error);
-      showToast("Error", "error", "Failed to create workflow");
+      showToast("Failed to create workflow", "error");
     }
   };
 
@@ -236,7 +246,7 @@ function WorkflowsPageContent() {
 
     try {
       if (!workflowFormData.name.trim() || workflowSteps.length === 0) {
-        showToast("Validation Error", "error", "Please provide a name and at least one step");
+        showToast("Please provide a name and at least one step", "error");
         return;
       }
 
@@ -249,23 +259,23 @@ function WorkflowsPageContent() {
       };
 
       await storage.updateWorkflow(editingWorkflow.id, updatedWorkflow);
-      showToast("Success", "success", "Workflow updated successfully");
+      showToast("Workflow updated successfully!", "success");
       resetForm();
       loadData();
     } catch (error) {
       console.error("Error updating workflow:", error);
-      showToast("Error", "error", "Failed to update workflow");
+      showToast("Failed to update workflow", "error");
     }
   };
 
   const handleDeleteWorkflow = async (workflowId: string) => {
     try {
       await storage.deleteWorkflow(workflowId);
-      showToast("Success", "success", "Workflow deleted successfully");
+      showToast("Workflow deleted successfully!", "success");
       loadData();
     } catch (error) {
       console.error("Error deleting workflow:", error);
-      showToast("Error", "error", "Failed to delete workflow");
+      showToast("Failed to delete workflow", "error");
     }
   };
 
@@ -281,12 +291,12 @@ function WorkflowsPageContent() {
       const workflow = workflows.find((w) => w.id === workflowId);
       if (workflow) {
         await storage.updateWorkflow(workflow.id, { isDefault: true });
-        showToast("Success", "success", "Default workflow updated");
+        showToast("Default workflow updated!", "success");
         loadData();
       }
     } catch (error) {
       console.error("Error setting default workflow:", error);
-      showToast("Error", "error", "Failed to set default workflow");
+      showToast("Failed to set default workflow", "error");
     }
   };
 
@@ -504,7 +514,7 @@ function WorkflowsPageContent() {
         </CardContent>
       </Card>
 
-      <ToastContainer />
+      <ClientToastContainer />
     </div>
   );
 }

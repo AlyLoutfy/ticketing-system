@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { storage, Department, TicketType, Workflow } from "@/lib/storage";
 import { SLADisplay } from "@/components/ui/sla-display";
-import { parseSLA } from "@/lib/utils/sla-formatter";
+import { WorkflowSLADisplay } from "@/components/ui/workflow-sla-display";
+import { WorkflowSelect } from "@/components/ui/workflow-select";
 import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -162,10 +163,6 @@ export default function AdminPage() {
       defaultWD: 5,
       description: "",
       subCategory: "",
-      sla: {
-        value: 5,
-        unit: "days",
-      },
       priority: "Medium",
       createdAt: now,
       updatedAt: now,
@@ -470,8 +467,7 @@ export default function AdminPage() {
                                     <tr className="bg-gray-100">
                                       <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Name</th>
                                       <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Sub-Category</th>
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-20">SLA Value</th>
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">SLA Unit</th>
+                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">SLA (Calculated)</th>
                                       <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">Priority</th>
                                       <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Workflow</th>
                                       <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Description</th>
@@ -499,39 +495,9 @@ export default function AdminPage() {
                                           </Select>
                                         </td>
                                         <td className="border-r border-gray-300 p-0">
-                                          <Input
-                                            type="number"
-                                            min="1"
-                                            value={typeof type.sla === "object" ? type.sla?.value || 5 : parseSLA(type.sla).value}
-                                            onChange={(e) => {
-                                              const currentSLA = typeof type.sla === "object" ? type.sla || { value: 5, unit: "days" } : parseSLA(type.sla);
-                                              updateTicketTypeInEdit(department.id, index, "sla", {
-                                                ...currentSLA,
-                                                value: parseInt(e.target.value) || 1,
-                                              });
-                                            }}
-                                            className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none"
-                                          />
-                                        </td>
-                                        <td className="border-r border-gray-300 p-0">
-                                          <Select
-                                            value={typeof type.sla === "object" ? type.sla?.unit || "days" : parseSLA(type.sla).unit}
-                                            onValueChange={(value: "hours" | "days") => {
-                                              const currentSLA = typeof type.sla === "object" ? type.sla || { value: 5, unit: "days" } : parseSLA(type.sla);
-                                              updateTicketTypeInEdit(department.id, index, "sla", {
-                                                ...currentSLA,
-                                                unit: value,
-                                              });
-                                            }}
-                                          >
-                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="hours">Hours</SelectItem>
-                                              <SelectItem value="days">Working Days</SelectItem>
-                                            </SelectContent>
-                                          </Select>
+                                          <div className="px-3 py-2 text-sm text-gray-600 h-8 flex items-center">
+                                            <WorkflowSLADisplay workflowId={type.workflowId} workflows={workflows} />
+                                          </div>
                                         </td>
                                         <td className="border-r border-gray-300 p-0">
                                           <Select value={type.priority || "Medium"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "priority", value)}>
@@ -547,19 +513,7 @@ export default function AdminPage() {
                                           </Select>
                                         </td>
                                         <td className="border-r border-gray-300 p-0">
-                                          <Select value={type.workflowId || ""} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "workflowId", value === "default" ? "" : value)}>
-                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
-                                              <SelectValue placeholder="Select workflow" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="default">Default Workflow</SelectItem>
-                                              {workflows.map((workflow) => (
-                                                <SelectItem key={workflow.id} value={workflow.id}>
-                                                  {workflow.name}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
+                                          <WorkflowSelect value={type.workflowId || "none"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "workflowId", value === "none" ? "" : value)} workflows={workflows} className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none" />
                                         </td>
                                         <td className="border-r border-gray-300 p-0">
                                           <Input value={type.description || ""} onChange={(e) => updateTicketTypeInEdit(department.id, index, "description", e.target.value)} placeholder="Optional description" className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none" />
@@ -623,7 +577,7 @@ export default function AdminPage() {
                                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{type.name}</td>
                                           <td className="px-4 py-3 text-sm text-gray-600">{type.subCategory || "-"}</td>
                                           <td className="px-4 py-3 text-sm text-gray-900">
-                                            <SLADisplay sla={type.sla} />
+                                            <WorkflowSLADisplay workflowId={type.workflowId} workflows={workflows} />
                                           </td>
                                           <td className="px-4 py-3">
                                             <Badge variant={type.priority === "Critical" ? "destructive" : type.priority === "High" ? "default" : "secondary"}>{type.priority || "Medium"}</Badge>
