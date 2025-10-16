@@ -221,7 +221,7 @@ function TicketPageContent() {
             Back to Ticket
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Edit Ticket #{ticket.id.slice(-8)}</h1>
+            <h1 className="text-3xl font-bold">Edit Ticket {ticket.id.slice(-8)}</h1>
             <p className="text-gray-600">Update ticket information</p>
           </div>
         </div>
@@ -260,14 +260,11 @@ function TicketPageContent() {
                         </SelectTrigger>
                         <SelectContent>
                           {selectedDepartment &&
-                            (() => {
-                              const subCategories = [...new Set(selectedDepartment.ticketTypes.map((type) => type.subCategory || "General"))];
-                              return subCategories.map((subCategory) => (
-                                <SelectItem key={subCategory} value={subCategory}>
-                                  {subCategory}
-                                </SelectItem>
-                              ));
-                            })()}
+                            (selectedDepartment.subCategories || []).map((subCategory) => (
+                              <SelectItem key={subCategory} value={subCategory}>
+                                {subCategory}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -283,7 +280,7 @@ function TicketPageContent() {
                         {selectedDepartment &&
                           formData.subCategory &&
                           selectedDepartment.ticketTypes
-                            .filter((type) => (type.subCategory || "General") === formData.subCategory)
+                            .filter((type) => type.subCategory === formData.subCategory)
                             .map((type) => (
                               <SelectItem key={type.id} value={type.id}>
                                 {type.name} ({type.defaultWD} WD)
@@ -451,7 +448,7 @@ function TicketPageContent() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">Ticket #{ticket.id.slice(-8)}</h1>
+            <h1 className="text-3xl font-bold">Ticket {ticket.id.slice(-8)}</h1>
             <Badge className={getStatusColor(ticket.status)}>{ticket.status}</Badge>
             {overdue && (
               <Badge variant="destructive">

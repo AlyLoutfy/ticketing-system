@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { storage, Ticket, Department } from "@/lib/storage";
 import { formatDate, isOverdue, getPriorityColor, getStatusColor, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
-import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Trash2, Check, Eye, Edit } from "lucide-react";
+import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Trash2, Check, Eye, Edit, Filter } from "lucide-react";
 import Link from "next/link";
 
 // Helper function to check if text is truncated
@@ -32,10 +34,13 @@ export default function Home() {
 
   const [filters, setFilters] = useState({
     search: "",
-    department: "all",
     status: "all",
     priority: "all",
-    dateRange: "all",
+    dateFilter: {
+      type: null as "created" | "due" | null, // null means no date filter type selected
+      from: undefined as Date | undefined,
+      to: undefined as Date | undefined,
+    },
   });
 
   const [selectedDepartment, setSelectedDepartment] = useState<string>("All");
@@ -107,10 +112,6 @@ export default function Home() {
       filtered = filtered.filter((ticket) => ticket.clientName.toLowerCase().includes(searchLower) || ticket.ticketType.toLowerCase().includes(searchLower));
     }
 
-    if (filters.department && filters.department !== "all") {
-      filtered = filtered.filter((ticket) => ticket.department === filters.department);
-    }
-
     if (filters.status && filters.status !== "all") {
       filtered = filtered.filter((ticket) => ticket.status === filters.status);
     }
@@ -119,28 +120,28 @@ export default function Home() {
       filtered = filtered.filter((ticket) => ticket.priority === filters.priority);
     }
 
-    if (filters.dateRange && filters.dateRange !== "all" && mounted) {
-      const today = new Date();
-      const filterDate = new Date();
+    // Advanced date filtering
+    if (filters.dateFilter.type && filters.dateFilter.from && mounted) {
+      const fromDate = new Date(filters.dateFilter.from);
+      fromDate.setHours(0, 0, 0, 0);
 
-      switch (filters.dateRange) {
-        case "today":
-          filterDate.setHours(0, 0, 0, 0);
-          filtered = filtered.filter((ticket) => {
-            const ticketDate = new Date(ticket.createdAt);
-            ticketDate.setHours(0, 0, 0, 0);
-            return ticketDate.getTime() === filterDate.getTime();
-          });
-          break;
-        case "week":
-          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-          filtered = filtered.filter((ticket) => new Date(ticket.createdAt) >= weekAgo);
-          break;
-        case "month":
-          const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-          filtered = filtered.filter((ticket) => new Date(ticket.createdAt) >= monthAgo);
-          break;
-      }
+      const toDate = filters.dateFilter.to ? new Date(filters.dateFilter.to) : fromDate;
+      toDate.setHours(23, 59, 59, 999); // End of day for range
+
+      filtered = filtered.filter((ticket) => {
+        let ticketDate: Date;
+
+        // Choose which date to filter by
+        if (filters.dateFilter.type === "created") {
+          ticketDate = new Date(ticket.createdAt);
+        } else if (filters.dateFilter.type === "due") {
+          ticketDate = new Date(ticket.dueDate);
+        } else {
+          return true; // Should not happen, but safety check
+        }
+
+        return ticketDate >= fromDate && ticketDate <= toDate;
+      });
     }
 
     setFilteredTickets(filtered);
@@ -305,15 +306,6 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Overdue Card */}
-            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "Overdue" ? "bg-red-500 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "Overdue" })}>
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">Overdue</span>
-              <span className="text-sm font-bold" suppressHydrationWarning>
-                {getStatusCount("Overdue")}
-              </span>
-            </div>
-
             {/* In Progress Card */}
             <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "In Progress" ? "bg-amber-500 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "In Progress" })}>
               <div className="h-4 w-4 bg-amber-600 rounded-full flex items-center justify-center">
@@ -331,6 +323,15 @@ export default function Home() {
               <span className="text-sm font-medium">Resolved</span>
               <span className="text-sm font-bold" suppressHydrationWarning>
                 {getStatusCount("Resolved")}
+              </span>
+            </div>
+
+            {/* Overdue Card */}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "Overdue" ? "bg-red-500 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "Overdue" })}>
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm font-medium">Overdue</span>
+              <span className="text-sm font-bold" suppressHydrationWarning>
+                {getStatusCount("Overdue")}
               </span>
             </div>
           </div>
@@ -388,190 +389,292 @@ export default function Home() {
             </Card>
           )}
 
-          {/* Filters Bar */}
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Input placeholder="Search tickets..." value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} className="h-8 w-48 text-xs" />
+          {/* Tickets Table */}
+          <Card className="overflow-hidden">
+            {/* Search and Filters Bar - Now part of the table area */}
+            <div className="px-4 py-2 border-b bg-gray-50">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input placeholder="Search tickets..." value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} className="h-8 w-48 text-xs" />
 
-              {selectedDepartment === "All" && (
-                <Select value={filters.department} onValueChange={(value) => setFilters({ ...filters, department: value })}>
-                  <SelectTrigger className="h-8 w-32 text-xs">
-                    <SelectValue placeholder="Dept" />
+                <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
+                  <SelectTrigger className="h-8 w-28 text-xs">
+                    <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Depts</SelectItem>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.name}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Critical">Critical</SelectItem>
                   </SelectContent>
                 </Select>
-              )}
 
-              <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
+                {/* Advanced Date Filter */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-8 px-3 text-xs justify-start text-left font-normal">
+                      <Filter className="h-3 w-3 mr-2" />
+                      {filters.dateFilter.type === null ? (
+                        "Date Filter"
+                      ) : (
+                        <span className="truncate">
+                          {filters.dateFilter.type === "created" ? "Created" : "Due"} - {filters.dateFilter.from ? (filters.dateFilter.to && filters.dateFilter.to.getTime() !== filters.dateFilter.from.getTime() ? `${formatDate(filters.dateFilter.from)} to ${formatDate(filters.dateFilter.to)}` : formatDate(filters.dateFilter.from)) : "Select Date Range"}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-3" align="start">
+                    <div className="space-y-3">
+                      {/* Date Type Selection */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-gray-700">Filter by:</label>
+                        <div className="flex gap-1">
+                          <Button
+                            variant={filters.dateFilter.type === "created" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() =>
+                              setFilters({
+                                ...filters,
+                                dateFilter: { type: "created", from: undefined, to: undefined },
+                              })
+                            }
+                            className="text-xs h-7 px-2"
+                          >
+                            Created Date
+                          </Button>
+                          <Button
+                            variant={filters.dateFilter.type === "due" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() =>
+                              setFilters({
+                                ...filters,
+                                dateFilter: { type: "due", from: undefined, to: undefined },
+                              })
+                            }
+                            className="text-xs h-7 px-2"
+                          >
+                            Due Date
+                          </Button>
+                        </div>
+                      </div>
 
-              <Select value={filters.dateRange} onValueChange={(value) => setFilters({ ...filters, dateRange: value })}>
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue placeholder="Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {(filters.search || filters.department !== "all" || filters.status !== "all" || filters.priority !== "all" || filters.dateRange !== "all") && (
-                <Button variant="outline" size="sm" onClick={() => setFilters({ search: "", department: "all", status: "all", priority: "all", dateRange: "all" })} className="h-8 text-xs">
-                  <X className="h-3 w-3 mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Tickets Table */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1400px]">
-                  {/* Header Row */}
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="w-8 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                      {selectedDepartment === "All" && <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>}
-                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket ID</th>
-                      <th className="w-48 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</th>
-                      <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket Type</th>
-                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                      <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SLA</th>
-                      <th className="w-24 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Left</th>
-                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                      <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                      <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((ticket) => {
-                      const isOverdueTicket = ticket.status === "Overdue";
-                      const isResolved = ticket.status === "Resolved";
-
-                      return (
-                        <tr key={ticket.id} className={`hover:bg-gray-50 transition-colors ${isOverdueTicket ? "bg-red-50 hover:bg-red-100" : isResolved ? "bg-green-50 hover:bg-green-100" : ""}`}>
-                          <td className="px-3 py-2">
-                            <input type="checkbox" checked={selectedTickets.has(ticket.id)} onChange={(e) => handleTicketSelection(ticket.id, e.target.checked)} className="rounded border-gray-300" />
-                          </td>
-                          {selectedDepartment === "All" && <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{ticket.department}</td>}
-                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                            <button onClick={() => handleTicketIdClick(ticket)} className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
-                              #{getTicketNumber(ticket.id)}
-                            </button>
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                            {isTextTruncated(ticket.clientName, 150) ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="truncate block max-w-[150px]">{ticket.clientName}</span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{ticket.clientName}</p>
-                                </TooltipContent>
-                              </Tooltip>
+                      {/* Selected Range Display */}
+                      {filters.dateFilter.type && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-700">Selected Range:</label>
+                          <div className="p-1.5 bg-gray-50 rounded text-xs">
+                            {filters.dateFilter.from ? (
+                              <div className="space-y-0.5">
+                                <div>
+                                  <span className="font-medium">From:</span> {formatDate(filters.dateFilter.from)}
+                                </div>
+                                {filters.dateFilter.to && (
+                                  <div>
+                                    <span className="font-medium">To:</span> {formatDate(filters.dateFilter.to)}
+                                    {filters.dateFilter.to.getTime() === filters.dateFilter.from.getTime() && <span className="text-gray-500 ml-1">(Single date)</span>}
+                                  </div>
+                                )}
+                              </div>
                             ) : (
-                              ticket.clientName
+                              <span className="text-gray-500">No date range selected</span>
                             )}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                            {isTextTruncated(ticket.ticketType, 120) ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="truncate block max-w-[120px]">{ticket.ticketType}</span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{ticket.ticketType}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              ticket.ticketType
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-sm whitespace-nowrap">
-                            <Badge variant={getStatusColor(ticket.status)}>{ticket.status}</Badge>
-                          </td>
-                          <td className="px-3 py-2 text-sm whitespace-nowrap">
-                            <Badge variant={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                            <SLADisplay sla={ticket.sla} />
-                          </td>
-                          <td className="px-3 py-2 text-sm whitespace-nowrap" suppressHydrationWarning>
-                            {(() => {
-                              const daysLeft = getDaysUntilDue(ticket.dueDate);
-                              if (daysLeft < 0) {
-                                return <span className="text-red-600 font-medium">Overdue</span>;
-                              } else if (daysLeft === 0) {
-                                return <span className="text-orange-600 font-medium">Due Today</span>;
-                              } else if (daysLeft <= 1) {
-                                return <span className="text-orange-600">{daysLeft}d</span>;
-                              } else if (daysLeft <= 3) {
-                                return <span className="text-yellow-600">{daysLeft}d</span>;
-                              } else {
-                                return <span className="text-green-600">{daysLeft}d</span>;
-                              }
-                            })()}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap" suppressHydrationWarning>
-                            {formatDate(ticket.createdAt)}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap" suppressHydrationWarning>
-                            {formatDate(ticket.dueDate)}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">
-                            <div className="flex space-x-1">
-                              <Link href={`/ticket/${ticket.id}`}>
-                                <Button variant="ghost" size="sm" className="cursor-pointer">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                              <Link href={`/ticket/${ticket.id}/edit`}>
-                                <Button variant="ghost" size="sm" className="cursor-pointer">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setConfirmationAction({ type: "delete", ticketId: ticket.id });
-                                  setShowConfirmation(true);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Calendar - Show when date type is selected */}
+                      {filters.dateFilter.type && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-700">Select {filters.dateFilter.type === "created" ? "Created" : "Due"} Date Range:</label>
+                          <Calendar
+                            mode="range"
+                            selected={{
+                              from: filters.dateFilter.from,
+                              to: filters.dateFilter.to,
+                            }}
+                            onSelect={(range) =>
+                              setFilters({
+                                ...filters,
+                                dateFilter: {
+                                  ...filters.dateFilter,
+                                  from: range?.from,
+                                  to: range?.to,
+                                },
+                              })
+                            }
+                            className="rounded-md border text-xs [&_.rdp-month]:w-full [&_.rdp-table]:w-full [&_.rdp-day]:h-7 [&_.rdp-day]:w-7 [&_.rdp-day]:text-xs [&_.rdp-head_cell]:h-6 [&_.rdp-head_cell]:text-xs [&_.rdp-caption]:h-6 [&_.rdp-caption]:text-xs"
+                          />
+                        </div>
+                      )}
+
+                      {/* Clear Button */}
+                      {filters.dateFilter.type && (
+                        <div className="pt-1 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setFilters({
+                                ...filters,
+                                dateFilter: { type: null, from: undefined, to: undefined },
+                              })
+                            }
+                            className="w-full text-xs h-7"
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Clear Date Filter
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {(filters.search || filters.status !== "all" || filters.priority !== "all" || filters.dateFilter.type !== null) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setFilters({
+                        search: "",
+                        status: "all",
+                        priority: "all",
+                        dateFilter: { type: null, from: undefined, to: undefined },
+                      })
+                    }
+                    className="h-8 text-xs"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                )}
               </div>
-            </CardContent>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1400px]">
+                {/* Header Row */}
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="w-8 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                    {selectedDepartment === "All" && <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>}
+                    <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket ID</th>
+                    <th className="w-48 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</th>
+                    <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket Type</th>
+                    <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                    <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SLA</th>
+                    <th className="w-24 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Left</th>
+                    <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                    <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((ticket) => {
+                    const isOverdueTicket = ticket.status === "Overdue";
+                    const isResolved = ticket.status === "Resolved";
+
+                    return (
+                      <tr key={ticket.id} className={`hover:bg-gray-50 transition-colors ${isOverdueTicket ? "bg-red-50 hover:bg-red-100" : isResolved ? "bg-green-50 hover:bg-green-100" : ""}`}>
+                        <td className="px-3 py-2">
+                          <input type="checkbox" checked={selectedTickets.has(ticket.id)} onChange={(e) => handleTicketSelection(ticket.id, e.target.checked)} className="rounded border-gray-300" />
+                        </td>
+                        {selectedDepartment === "All" && <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{ticket.department}</td>}
+                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                          <button onClick={() => handleTicketIdClick(ticket)} className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
+                            {getTicketNumber(ticket.id)}
+                          </button>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                          {isTextTruncated(ticket.clientName, 150) ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="truncate block max-w-[150px]">{ticket.clientName}</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{ticket.clientName}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            ticket.clientName
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                          {isTextTruncated(ticket.ticketType, 120) ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="truncate block max-w-[120px]">{ticket.ticketType}</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{ticket.ticketType}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            ticket.ticketType
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-sm whitespace-nowrap">
+                          <Badge variant={getStatusColor(ticket.status)}>{ticket.status}</Badge>
+                        </td>
+                        <td className="px-3 py-2 text-sm whitespace-nowrap">
+                          <Badge variant={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                          <SLADisplay sla={ticket.sla} />
+                        </td>
+                        <td className="px-3 py-2 text-sm whitespace-nowrap" suppressHydrationWarning>
+                          {(() => {
+                            const daysLeft = getDaysUntilDue(ticket.dueDate);
+                            if (daysLeft < 0) {
+                              return <span className="text-red-600 font-medium">Overdue</span>;
+                            } else if (daysLeft === 0) {
+                              return <span className="text-orange-600 font-medium">Due Today</span>;
+                            } else if (daysLeft <= 1) {
+                              return <span className="text-orange-600">{daysLeft}d</span>;
+                            } else if (daysLeft <= 3) {
+                              return <span className="text-yellow-600">{daysLeft}d</span>;
+                            } else {
+                              return <span className="text-green-600">{daysLeft}d</span>;
+                            }
+                          })()}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap" suppressHydrationWarning>
+                          {formatDate(ticket.createdAt)}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap" suppressHydrationWarning>
+                          {formatDate(ticket.dueDate)}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">
+                          <div className="flex space-x-1">
+                            <Link href={`/ticket/${ticket.id}`}>
+                              <Button variant="ghost" size="sm" className="cursor-pointer">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Link href={`/ticket/${ticket.id}/edit`}>
+                              <Button variant="ghost" size="sm" className="cursor-pointer">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setConfirmationAction({ type: "delete", ticketId: ticket.id });
+                                setShowConfirmation(true);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </Card>
 
           {/* Pagination */}
@@ -617,7 +720,7 @@ export default function Home() {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-gray-900">Ticket #{getTicketNumber(selectedTicketForModal.id)}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">Ticket {getTicketNumber(selectedTicketForModal.id)}</h2>
                     <Badge className={getStatusColor(selectedTicketForModal.status)}>{selectedTicketForModal.status}</Badge>
                     {selectedTicketForModal.status === "Overdue" && (
                       <Badge variant="destructive">

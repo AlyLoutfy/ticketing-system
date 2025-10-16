@@ -227,17 +227,14 @@ export default function CreateTicketPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {selectedDepartment &&
-                              (() => {
-                                const subCategories = [...new Set(selectedDepartment.ticketTypes.map((type) => type.subCategory || "General"))];
-                                return subCategories.map((subCategory) => (
-                                  <SelectItem key={subCategory} value={subCategory}>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                                      {subCategory}
-                                    </div>
-                                  </SelectItem>
-                                ));
-                              })()}
+                              (selectedDepartment.subCategories || []).map((subCategory) => (
+                                <SelectItem key={subCategory} value={subCategory}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                    {subCategory}
+                                  </div>
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -263,7 +260,7 @@ export default function CreateTicketPage() {
                           {selectedDepartment &&
                             formData.subCategory &&
                             selectedDepartment.ticketTypes
-                              .filter((type) => (type.subCategory || "General") === formData.subCategory)
+                              .filter((type) => type.subCategory === formData.subCategory)
                               .map((type) => (
                                 <SelectItem key={type.id} value={type.id}>
                                   <div className="flex items-center justify-between w-full">

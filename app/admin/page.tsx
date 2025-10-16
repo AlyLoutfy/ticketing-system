@@ -11,11 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { storage, Department, TicketType, Workflow } from "@/lib/storage";
 import { WorkflowSLADisplay } from "@/components/ui/workflow-sla-display";
 import { WorkflowSelect } from "@/components/ui/workflow-select";
-import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowLeft } from "lucide-react";
+import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowLeft, X, Check } from "lucide-react";
 import Link from "next/link";
-
-// Predefined sub-categories
-const SUB_CATEGORIES = ["General", "Finance", "Security", "Administrative", "Operations", "Membership", "Contracts", "Handover", "Maintenance", "Inquiries", "Complaints", "Communication", "Technical", "Legal", "Human Resources", "Marketing", "Sales", "Customer Service", "IT Support", "Facilities"];
 
 export default function AdminPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -29,6 +26,7 @@ export default function AdminPage() {
   const [deptFormData, setDeptFormData] = useState({
     name: "",
     description: "",
+    subCategories: [] as string[],
   });
 
   // Expandable departments state
@@ -37,6 +35,53 @@ export default function AdminPage() {
   // Inline editing states
   const [editingTicketTypes, setEditingTicketTypes] = useState<{ [deptId: string]: TicketType[] }>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<{ [deptId: string]: boolean }>({});
+
+  // Sub-category management
+  const [newSubCategory, setNewSubCategory] = useState("");
+  const [editingSubCategory, setEditingSubCategory] = useState<{ index: number; value: string } | null>(null);
+
+  const addSubCategory = () => {
+    if (newSubCategory.trim() && !(deptFormData.subCategories || []).includes(newSubCategory.trim())) {
+      setDeptFormData((prev) => ({
+        ...prev,
+        subCategories: [...(prev.subCategories || []), newSubCategory.trim()],
+      }));
+      setNewSubCategory("");
+    }
+  };
+
+  const removeSubCategory = (subCategory: string) => {
+    setDeptFormData((prev) => ({
+      ...prev,
+      subCategories: (prev.subCategories || []).filter((cat) => cat !== subCategory),
+    }));
+  };
+
+  const startEditingSubCategory = (index: number, currentValue: string) => {
+    setEditingSubCategory({ index, value: currentValue });
+  };
+
+  const saveSubCategoryEdit = () => {
+    if (editingSubCategory && editingSubCategory.value.trim()) {
+      const newValue = editingSubCategory.value.trim();
+      const currentCategories = deptFormData.subCategories || [];
+
+      // Check if the new value already exists (excluding the current one being edited)
+      const isDuplicate = currentCategories.some((cat, idx) => cat === newValue && idx !== editingSubCategory.index);
+
+      if (!isDuplicate) {
+        setDeptFormData((prev) => ({
+          ...prev,
+          subCategories: (prev.subCategories || []).map((cat, idx) => (idx === editingSubCategory.index ? newValue : cat)),
+        }));
+      }
+    }
+    setEditingSubCategory(null);
+  };
+
+  const cancelSubCategoryEdit = () => {
+    setEditingSubCategory(null);
+  };
 
   useEffect(() => {
     loadDepartments();
@@ -88,12 +133,15 @@ export default function AdminPage() {
       const newDept: Omit<Department, "id" | "createdAt" | "updatedAt"> = {
         name: deptFormData.name.trim(),
         ticketTypes: [],
+        subCategories: deptFormData.subCategories,
       };
 
       await storage.createDepartment(newDept);
       await loadDepartments();
       setShowDeptDialog(false);
-      setDeptFormData({ name: "", description: "" });
+      setDeptFormData({ name: "", description: "", subCategories: [] });
+      setNewSubCategory("");
+      setEditingSubCategory(null);
     } catch (error) {
       console.error("Error creating department:", error);
       alert("Error creating department. Please try again.");
@@ -106,13 +154,16 @@ export default function AdminPage() {
     try {
       const updates: Partial<Department> = {
         name: deptFormData.name.trim(),
+        subCategories: deptFormData.subCategories,
       };
 
       await storage.updateDepartment(editingDept.id, updates);
       await loadDepartments();
       setShowDeptDialog(false);
       setEditingDept(null);
-      setDeptFormData({ name: "", description: "" });
+      setDeptFormData({ name: "", description: "", subCategories: [] });
+      setNewSubCategory("");
+      setEditingSubCategory(null);
     } catch (error) {
       console.error("Error updating department:", error);
       alert("Error updating department. Please try again.");
@@ -356,7 +407,9 @@ export default function AdminPage() {
                 <Button
                   onClick={() => {
                     setEditingDept(null);
-                    setDeptFormData({ name: "", description: "" });
+                    setDeptFormData({ name: "", description: "", subCategories: [] });
+                    setNewSubCategory("");
+                    setEditingSubCategory(null);
                   }}
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -373,9 +426,65 @@ export default function AdminPage() {
                     <Label htmlFor="deptName">Department Name *</Label>
                     <Input id="deptName" value={deptFormData.name} onChange={(e) => setDeptFormData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Enter department name" />
                   </div>
+
+                  <div className="space-y-3">
+                    <Label>Sub-Categories</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="Add sub-category" onKeyPress={(e) => e.key === "Enter" && addSubCategory()} />
+                        <Button type="button" onClick={addSubCategory} size="sm">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      {(deptFormData.subCategories || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {(deptFormData.subCategories || []).map((subCat, index) => (
+                            <div key={index} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-sm">
+                              {editingSubCategory?.index === index ? (
+                                <>
+                                  <Input
+                                    value={editingSubCategory.value}
+                                    onChange={(e) => setEditingSubCategory({ index, value: e.target.value })}
+                                    onKeyPress={(e) => {
+                                      if (e.key === "Enter") saveSubCategoryEdit();
+                                      if (e.key === "Escape") cancelSubCategoryEdit();
+                                    }}
+                                    className="h-6 text-xs px-1 py-0"
+                                    autoFocus
+                                  />
+                                  <button type="button" onClick={saveSubCategoryEdit} className="text-green-600 hover:text-green-700" title="Save">
+                                    <Check className="w-3 h-3" />
+                                  </button>
+                                  <button type="button" onClick={cancelSubCategoryEdit} className="text-gray-500 hover:text-gray-700" title="Cancel">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <span>{subCat}</span>
+                                  <button type="button" onClick={() => startEditingSubCategory(index, subCat)} className="text-blue-500 hover:text-blue-700" title="Edit">
+                                    <Edit className="w-3 h-3" />
+                                  </button>
+                                  <button type="button" onClick={() => removeSubCategory(subCat)} className="text-red-500 hover:text-red-700" title="Remove">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowDeptDialog(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeptDialog(false);
+                      setEditingSubCategory(null);
+                    }}
+                  >
                     Cancel
                   </Button>
                   <Button onClick={editingDept ? handleUpdateDepartment : handleCreateDepartment}>
@@ -402,7 +511,9 @@ export default function AdminPage() {
                   variant="outline"
                   onClick={() => {
                     setEditingDept(null);
-                    setDeptFormData({ name: "", description: "" });
+                    setDeptFormData({ name: "", description: "", subCategories: [] });
+                    setNewSubCategory("");
+                    setEditingSubCategory(null);
                     setShowDeptDialog(true);
                   }}
                 >
@@ -443,10 +554,31 @@ export default function AdminPage() {
                               </Button>
                             </>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteDepartment(department.id)} className="cursor-pointer">
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingDept(department);
+                                  setDeptFormData({
+                                    name: department.name,
+                                    description: "",
+                                    subCategories: department.subCategories || [],
+                                  });
+                                  setNewSubCategory("");
+                                  setEditingSubCategory(null);
+                                  setShowDeptDialog(true);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => handleDeleteDepartment(department.id)} className="cursor-pointer">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -485,7 +617,7 @@ export default function AdminPage() {
                                               <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              {SUB_CATEGORIES.map((category) => (
+                                              {(department.subCategories || []).map((category) => (
                                                 <SelectItem key={category} value={category}>
                                                   {category}
                                                 </SelectItem>

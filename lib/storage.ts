@@ -5,6 +5,7 @@ export interface Department {
   id: string;
   name: string;
   ticketTypes: TicketType[];
+  subCategories: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -664,9 +665,13 @@ class IndexedDBStorage {
         };
       });
 
+      // Extract unique sub-categories from ticket types
+      const subCategories = [...new Set(ticketTypes.map((type) => type.subCategory).filter(Boolean))] as string[];
+
       await this.createDepartment({
         name: deptData.name,
         ticketTypes,
+        subCategories,
       });
     }
   }
