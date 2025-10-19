@@ -426,95 +426,87 @@ function WorkflowsPageContent() {
 
   // Main workflows list view
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Link href="/admin">
-            <Button variant="outline" size="sm" className="cursor-pointer">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Admin
-            </Button>
-          </Link>
+    <div className="h-full flex flex-col">
+      {/* Page Header */}
+      <div className="bg-white shadow-sm border-b px-6 py-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Workflow Management</h1>
-            <p className="text-gray-600 mt-2">Create and manage ticket processing workflows</p>
+            <h1 className="text-2xl font-bold text-gray-900">Workflow Management</h1>
+            <p className="text-sm text-gray-500">Create and manage ticket processing workflows</p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/">
-            <Button variant="outline" className="cursor-pointer">
-              <Ticket className="w-4 h-4 mr-2" />
-              View Tickets
+          <div className="flex gap-2">
+            <Button onClick={() => setShowCreateForm(true)} className="cursor-pointer">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Workflow
             </Button>
-          </Link>
-          <Button onClick={() => setShowCreateForm(true)} className="cursor-pointer">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Workflow
-          </Button>
+          </div>
         </div>
       </div>
 
-      {/* Workflows Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Workflows ({workflows.length})</CardTitle>
-          <CardDescription>Manage your ticket processing workflows</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">Default</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Steps</TableHead>
-                <TableHead>Departments</TableHead>
-                <TableHead className="w-32">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {workflows.map((workflow) => (
-                <TableRow key={workflow.id} className="h-16">
-                  <TableCell>
-                    {workflow.isDefault ? (
-                      <Badge variant="default" className="bg-yellow-100 text-yellow-800">
-                        <Star className="w-3 h-3 mr-1" />
-                        Default
-                      </Badge>
-                    ) : (
-                      <Button variant="ghost" size="sm" onClick={() => handleSetDefault(workflow.id)} className="text-gray-400 hover:text-yellow-600 cursor-pointer">
-                        <StarOff className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{workflow.name}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.description || "No description"}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{workflow.steps.length} steps</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.steps.map((step) => getDepartmentName(step.departmentId)).join(" → ")}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => startEditingWorkflow(workflow)} className="cursor-pointer">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteWorkflow(workflow.id)} className="text-red-600 hover:text-red-700 cursor-pointer">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto p-6">
+        {/* Workflows Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>All Workflows ({workflows.length})</CardTitle>
+            <CardDescription>Manage your ticket processing workflows</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Default</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Steps</TableHead>
+                  <TableHead>Departments</TableHead>
+                  <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {workflows.map((workflow) => (
+                  <TableRow key={workflow.id} className="h-16">
+                    <TableCell>
+                      {workflow.isDefault ? (
+                        <Badge variant="default" className="bg-yellow-100 text-yellow-800">
+                          <Star className="w-3 h-3 mr-1" />
+                          Default
+                        </Badge>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => handleSetDefault(workflow.id)} className="text-gray-400 hover:text-yellow-600 cursor-pointer">
+                          <StarOff className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{workflow.name}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.description || "No description"}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{workflow.steps.length} steps</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.steps.map((step) => getDepartmentName(step.departmentId)).join(" → ")}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => startEditingWorkflow(workflow)} className="cursor-pointer">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteWorkflow(workflow.id)} className="text-red-600 hover:text-red-700 cursor-pointer">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
       <ClientToastContainer />
     </div>

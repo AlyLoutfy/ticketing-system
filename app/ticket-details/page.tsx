@@ -9,7 +9,7 @@ import { WorkflowTimeline } from "@/components/ui/workflow-timeline";
 import { storage, Ticket, WorkflowResolution } from "@/lib/storage";
 import { formatDate, getPriorityColor, getStatusColor, getDaysUntilDue, isOverdue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
-import { ArrowLeft, Calendar, Clock, User, Building, FileText, AlertTriangle, CheckCircle, Edit, Trash2, Home } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Building, FileText, AlertTriangle, CheckCircle, Edit, X, Home } from "lucide-react";
 import Link from "next/link";
 
 function TicketDetailsContent() {
@@ -56,16 +56,16 @@ function TicketDetailsContent() {
     loadTicketDetails();
   }, [ticketId]);
 
-  const handleDelete = async () => {
+  const handleClose = async () => {
     if (!ticket) return;
 
-    if (confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
+    if (confirm("Are you sure you want to close this ticket? This action will archive the ticket.")) {
       try {
-        await storage.deleteTicket(ticket.id);
+        await storage.closeTicket(ticket.id);
         router.push("/");
       } catch (err) {
-        console.error("Error deleting ticket:", err);
-        alert("Failed to delete ticket. Please try again.");
+        console.error("Error closing ticket:", err);
+        alert("Failed to close ticket. Please try again.");
       }
     }
   };
@@ -147,9 +147,9 @@ function TicketDetailsContent() {
                   Edit Ticket
                 </Button>
               </Link>
-              <Button variant="outline" onClick={handleDelete} className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50">
-                <Trash2 className="w-4 h-4" />
-                Delete
+              <Button variant="outline" onClick={handleClose} className="flex items-center gap-2 text-gray-600 hover:text-gray-700 hover:bg-gray-50">
+                <X className="w-4 h-4" />
+                Close Ticket
               </Button>
             </div>
           </div>

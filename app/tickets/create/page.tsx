@@ -161,299 +161,296 @@ export default function CreateTicketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto p-6 max-w-7xl">
-        {/* Header Section */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <Link href="/">
-              <Button variant="outline" size="sm" className="shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <div className="flex-1 text-center">
-              <h1 className="text-3xl font-bold text-gray-900">Create New Ticket</h1>
-            </div>
-            <div className="w-32"></div> {/* Spacer to balance the layout */}
+    <div className="h-full flex flex-col">
+      {/* Page Header */}
+      <div className="bg-white shadow-sm border-b px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Create New Ticket</h1>
+            <p className="text-sm text-gray-500">Provide the necessary details for the ticket</p>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Main Form */}
-          <div className="xl:col-span-2">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg p-4 m-0">
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <Ticket className="w-6 h-6" />
-                  Ticket Information
-                </CardTitle>
-                <CardDescription className="text-blue-100">Provide the necessary details for the ticket</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 pt-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Step 1: Department & Sub-Category Selection */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
-                      <h3 className="text-lg font-semibold text-gray-900">Department & Category</h3>
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Main Form */}
+            <div className="xl:col-span-2">
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg p-4 m-0">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Ticket className="w-6 h-6" />
+                    Ticket Information
+                  </CardTitle>
+                  <CardDescription className="text-blue-100">Provide the necessary details for the ticket</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 pt-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Step 1: Department & Sub-Category Selection */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+                        <h3 className="text-lg font-semibold text-gray-900">Department & Category</h3>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <Label htmlFor="department" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                            Department <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={formData.department} onValueChange={handleDepartmentChange}>
+                            <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors">
+                              <SelectValue placeholder="Choose a department" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {departments.map((dept) => (
+                                <SelectItem key={dept.id} value={dept.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    {dept.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label htmlFor="subCategory" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                            Sub-Category <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={formData.subCategory} onValueChange={handleSubCategoryChange} disabled={!selectedDepartment}>
+                            <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors disabled:bg-gray-50">
+                              <SelectValue placeholder="Choose sub-category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {selectedDepartment &&
+                                (selectedDepartment.subCategories || []).map((subCategory) => (
+                                  <SelectItem key={subCategory} value={subCategory}>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                      {subCategory}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <Label htmlFor="department" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                          Department <span className="text-red-500">*</span>
-                        </Label>
-                        <Select value={formData.department} onValueChange={handleDepartmentChange}>
-                          <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors">
-                            <SelectValue placeholder="Choose a department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {departments.map((dept) => (
-                              <SelectItem key={dept.id} value={dept.id}>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                  {dept.name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    {/* Step 2: Ticket Type Selection */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+                        <h3 className="text-lg font-semibold text-gray-900">Ticket Type</h3>
                       </div>
 
                       <div className="space-y-3">
-                        <Label htmlFor="subCategory" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                          Sub-Category <span className="text-red-500">*</span>
+                        <Label htmlFor="ticketType" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                          Ticket Type <span className="text-red-500">*</span>
                         </Label>
-                        <Select value={formData.subCategory} onValueChange={handleSubCategoryChange} disabled={!selectedDepartment}>
+                        <Select value={formData.ticketType} onValueChange={(value) => setFormData((prev) => ({ ...prev, ticketType: value }))} disabled={!formData.subCategory}>
                           <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors disabled:bg-gray-50">
-                            <SelectValue placeholder="Choose sub-category" />
+                            <SelectValue placeholder="Select ticket type" />
                           </SelectTrigger>
                           <SelectContent>
                             {selectedDepartment &&
-                              (selectedDepartment.subCategories || []).map((subCategory) => (
-                                <SelectItem key={subCategory} value={subCategory}>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                                    {subCategory}
-                                  </div>
-                                </SelectItem>
-                              ))}
+                              formData.subCategory &&
+                              selectedDepartment.ticketTypes
+                                .filter((type) => type.subCategory === formData.subCategory)
+                                .map((type) => (
+                                  <SelectItem key={type.id} value={type.id}>
+                                    <div className="flex items-center justify-between w-full">
+                                      <span>{type.name}</span>
+                                      <Badge variant="secondary" className="ml-2 text-xs">
+                                        {type.defaultWD} WD
+                                      </Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Step 2: Ticket Type Selection */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
-                      <h3 className="text-lg font-semibold text-gray-900">Ticket Type</h3>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="ticketType" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        Ticket Type <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={formData.ticketType} onValueChange={(value) => setFormData((prev) => ({ ...prev, ticketType: value }))} disabled={!formData.subCategory}>
-                        <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors disabled:bg-gray-50">
-                          <SelectValue placeholder="Select ticket type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedDepartment &&
-                            formData.subCategory &&
-                            selectedDepartment.ticketTypes
-                              .filter((type) => type.subCategory === formData.subCategory)
-                              .map((type) => (
-                                <SelectItem key={type.id} value={type.id}>
-                                  <div className="flex items-center justify-between w-full">
-                                    <span>{type.name}</span>
-                                    <Badge variant="secondary" className="ml-2 text-xs">
-                                      {type.defaultWD} WD
-                                    </Badge>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Step 3: Client Information */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
-                      <h3 className="text-lg font-semibold text-gray-900">Client Information</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <Label htmlFor="clientName" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                          Client Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input id="clientName" value={formData.clientName} onChange={(e) => setFormData((prev) => ({ ...prev, clientName: e.target.value }))} placeholder="Enter client name" required className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors" />
+                    {/* Step 3: Client Information */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+                        <h3 className="text-lg font-semibold text-gray-900">Client Information</h3>
                       </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <Label htmlFor="clientName" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                            Client Name <span className="text-red-500">*</span>
+                          </Label>
+                          <Input id="clientName" value={formData.clientName} onChange={(e) => setFormData((prev) => ({ ...prev, clientName: e.target.value }))} placeholder="Enter client name" required className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors" />
+                        </div>
+                        <div className="space-y-3">
+                          <Label htmlFor="unitId" className="text-sm font-medium text-gray-700">
+                            Unit ID <span className="text-gray-400 text-xs">(Optional)</span>
+                          </Label>
+                          <Input id="unitId" value={formData.unitId} onChange={(e) => setFormData((prev) => ({ ...prev, unitId: e.target.value }))} placeholder="Enter unit ID" className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors" />
+                        </div>
+                      </div>
+
                       <div className="space-y-3">
-                        <Label htmlFor="unitId" className="text-sm font-medium text-gray-700">
-                          Unit ID <span className="text-gray-400 text-xs">(Optional)</span>
+                        <Label htmlFor="ticketOwner" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                          Ticket Owner <span className="text-red-500">*</span>
                         </Label>
-                        <Input id="unitId" value={formData.unitId} onChange={(e) => setFormData((prev) => ({ ...prev, unitId: e.target.value }))} placeholder="Enter unit ID" className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors" />
+                        <Input id="ticketOwner" value={formData.ticketOwner} onChange={(e) => setFormData((prev) => ({ ...prev, ticketOwner: e.target.value }))} placeholder="Enter ticket owner name" required className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors" />
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <Label htmlFor="ticketOwner" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        Ticket Owner <span className="text-red-500">*</span>
-                      </Label>
-                      <Input id="ticketOwner" value={formData.ticketOwner} onChange={(e) => setFormData((prev) => ({ ...prev, ticketOwner: e.target.value }))} placeholder="Enter ticket owner name" required className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors" />
-                    </div>
-                  </div>
+                    {/* Step 4: Additional Details */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">4</div>
+                        <h3 className="text-lg font-semibold text-gray-900">Additional Details</h3>
+                      </div>
 
-                  {/* Step 4: Additional Details */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">4</div>
-                      <h3 className="text-lg font-semibold text-gray-900">Additional Details</h3>
+                      <div className="space-y-3">
+                        <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                          Description <span className="text-gray-400 text-xs">(Optional)</span>
+                        </Label>
+                        <Textarea id="description" value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} placeholder="Add any additional notes or context for this ticket..." rows={4} className="border-2 border-gray-200 focus:border-blue-500 transition-colors resize-none" />
+                      </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-                        Description <span className="text-gray-400 text-xs">(Optional)</span>
-                      </Label>
-                      <Textarea id="description" value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} placeholder="Add any additional notes or context for this ticket..." rows={4} className="border-2 border-gray-200 focus:border-blue-500 transition-colors resize-none" />
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-4 pt-6 border-t border-gray-200">
-                    <Button type="submit" disabled={submitting} className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer">
-                      {submitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Creating Ticket...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Create Ticket
-                        </>
-                      )}
-                    </Button>
-                    <Link href="/">
-                      <Button type="button" variant="outline" className="h-12 px-8 border-2 border-gray-300 hover:border-gray-400 transition-colors cursor-pointer">
-                        Cancel
+                    {/* Action Buttons */}
+                    <div className="flex gap-4 pt-6 border-t border-gray-200">
+                      <Button type="submit" disabled={submitting} className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer">
+                        {submitting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Creating Ticket...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Create Ticket
+                          </>
+                        )}
                       </Button>
-                    </Link>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Preview Sidebar */}
-          <div className="xl:col-span-1">
-            <div className="sticky top-6">
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
-                <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg p-4 m-0">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Ticket Preview
-                  </CardTitle>
-                  <CardDescription className="text-green-100">Review your ticket details</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6 pt-6 space-y-4">
-                  {/* Department & Type */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-600">Department</span>
+                      <Link href="/">
+                        <Button type="button" variant="outline" className="h-12 px-8 border-2 border-gray-300 hover:border-gray-400 transition-colors cursor-pointer">
+                          Cancel
+                        </Button>
+                      </Link>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 pl-4">{selectedDepartment?.name || "Not selected"}</p>
-
-                    {formData.subCategory && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-600">Sub-Category</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900 pl-4">{formData.subCategory}</p>
-                      </>
-                    )}
-
-                    {selectedDepartment?.ticketTypes.find((t) => t.id === formData.ticketType) && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-600">Ticket Type</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900 pl-4">{selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.name}</p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Client Info */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-600">Client</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900 pl-4">{formData.clientName || "Not entered"}</p>
-
-                    {formData.unitId && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-600">Unit ID</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900 pl-4">{formData.unitId}</p>
-                      </>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-600">Ticket Owner</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900 pl-4">{formData.ticketOwner || "Not entered"}</p>
-                  </div>
-
-                  {/* Ticket Properties */}
-                  {selectedDepartment?.ticketTypes.find((t) => t.id === formData.ticketType) && (
-                    <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Ticket Properties</h4>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Working Days</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.defaultWD} WD
-                        </Badge>
-                      </div>
-
-                      {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Priority</span>
-                          <Badge className="text-xs" style={{ backgroundColor: getPriorityColor(selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority || "").split(" ")[0], color: getPriorityColor(selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority || "").split(" ")[1] }}>
-                            {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Due Date */}
-                  {estimatedDueDate && (
-                    <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-700">Estimated Due Date</span>
-                      </div>
-                      <p className="text-sm font-semibold text-blue-900 pl-6" suppressHydrationWarning>
-                        {formatDate(estimatedDueDate)}
-                      </p>
-                    </div>
-                  )}
+                  </form>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Preview Sidebar */}
+            <div className="xl:col-span-1">
+              <div>
+                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
+                  <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg p-4 m-0">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      Ticket Preview
+                    </CardTitle>
+                    <CardDescription className="text-green-100">Review your ticket details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-6 space-y-4">
+                    {/* Department & Type */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-600">Department</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 pl-4">{selectedDepartment?.name || "Not selected"}</p>
+
+                      {formData.subCategory && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                            <span className="text-sm font-medium text-gray-600">Sub-Category</span>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900 pl-4">{formData.subCategory}</p>
+                        </>
+                      )}
+
+                      {selectedDepartment?.ticketTypes.find((t) => t.id === formData.ticketType) && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-sm font-medium text-gray-600">Ticket Type</span>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900 pl-4">{selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.name}</p>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Client Info */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-600">Client</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 pl-4">{formData.clientName || "Not entered"}</p>
+
+                      {formData.unitId && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-sm font-medium text-gray-600">Unit ID</span>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900 pl-4">{formData.unitId}</p>
+                        </>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-600">Ticket Owner</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 pl-4">{formData.ticketOwner || "Not entered"}</p>
+                    </div>
+
+                    {/* Ticket Properties */}
+                    {selectedDepartment?.ticketTypes.find((t) => t.id === formData.ticketType) && (
+                      <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Ticket Properties</h4>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Working Days</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.defaultWD} WD
+                          </Badge>
+                        </div>
+
+                        {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Priority</span>
+                            <Badge className="text-xs" style={{ backgroundColor: getPriorityColor(selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority || "").split(" ")[0], color: getPriorityColor(selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority || "").split(" ")[1] }}>
+                              {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Due Date */}
+                    {estimatedDueDate && (
+                      <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-700">Estimated Due Date</span>
+                        </div>
+                        <p className="text-sm font-semibold text-blue-900 pl-6" suppressHydrationWarning>
+                          {formatDate(estimatedDueDate)}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>

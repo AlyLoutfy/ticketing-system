@@ -15,7 +15,7 @@ import { formatDate, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { WorkflowProgressBadge } from "@/components/ui/workflow-progress-badge";
 import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
-import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Trash2, Check, Eye, Edit, Filter } from "lucide-react";
+import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -33,8 +33,6 @@ export default function Home() {
   const [workflowResolutions, setWorkflowResolutions] = useState<Map<string, WorkflowResolution[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(100);
   const [mounted, setMounted] = useState(false);
 
   const [filters, setFilters] = useState({
@@ -52,14 +50,14 @@ export default function Home() {
   const [scrollPosition, setScrollPosition] = useState<number>(0);
   const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
 
-  // Selection state
-  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
-  const [showBulkActions, setShowBulkActions] = useState(false);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [ticketsPerPage, setTicketsPerPage] = useState<number>(20);
 
   // Confirmation modal state
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState<{
-    type: "edit" | "delete";
+    type: "edit" | "close";
     ticketId: string;
     field?: string;
     newValue?: string;
@@ -153,6 +151,22 @@ export default function Home() {
     setCurrentPage(1);
   }, [tickets, selectedDepartment, filters, mounted]);
 
+  // Pagination logic
+  const totalTickets = filteredTickets.length;
+  const totalPages = Math.ceil(totalTickets / ticketsPerPage);
+  const startIndex = (currentPage - 1) * ticketsPerPage;
+  const endIndex = startIndex + ticketsPerPage;
+  const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleTicketsPerPageChange = (value: string) => {
+    setTicketsPerPage(parseInt(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
   useEffect(() => {
     setMounted(true);
     loadData();
@@ -181,59 +195,18 @@ export default function Home() {
     }, 100);
   };
 
-  const handleDeleteTicket = async (ticketId: string) => {
+  const handleCloseTicket = async (ticketId: string) => {
     try {
-      await storage.deleteTicket(ticketId);
+      await storage.closeTicket(ticketId);
       const updatedTickets = await storage.getTickets();
       setTickets(updatedTickets);
       setShowConfirmation(false);
       setConfirmationAction(null);
-      showToast("Ticket deleted successfully!", "success");
+      showToast("Ticket closed successfully!", "success");
     } catch (error) {
-      console.error("Error deleting ticket:", error);
-      showToast("Failed to delete ticket", "error");
+      console.error("Error closing ticket:", error);
+      showToast("Failed to close ticket", "error");
     }
-  };
-
-  const handleBulkAction = async (action: "delete" | "updateStatus") => {
-    if (selectedTickets.size === 0) return;
-
-    try {
-      for (const ticketId of selectedTickets) {
-        if (action === "delete") {
-          await storage.deleteTicket(ticketId);
-        } else if (action === "updateStatus") {
-          await storage.updateTicket(ticketId, { status: "Resolved" });
-        }
-      }
-
-      const updatedTickets = await storage.getTickets();
-      setTickets(updatedTickets);
-      setSelectedTickets(new Set());
-      setShowBulkActions(false);
-
-      // Show success notification
-      const count = selectedTickets.size;
-      if (action === "delete") {
-        showToast(`${count} ticket${count > 1 ? "s" : ""} deleted successfully!`, "success");
-      } else {
-        showToast(`${count} ticket${count > 1 ? "s" : ""} marked as resolved!`, "success");
-      }
-    } catch (error) {
-      console.error("Error performing bulk action:", error);
-      showToast("Failed to perform bulk action", "error");
-    }
-  };
-
-  const handleTicketSelection = (ticketId: string, selected: boolean) => {
-    const newSelection = new Set(selectedTickets);
-    if (selected) {
-      newSelection.add(ticketId);
-    } else {
-      newSelection.delete(ticketId);
-    }
-    setSelectedTickets(newSelection);
-    setShowBulkActions(newSelection.size > 0);
   };
 
   const getStatusCount = (status: string) => {
@@ -264,37 +237,26 @@ export default function Home() {
   return (
     <TooltipProvider>
       <div className="h-screen flex flex-col bg-gray-50" suppressHydrationWarning>
-        {/* Header */}
-        <div className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
-              <div className="flex items-center space-x-4">
-                <TicketIcon className="h-8 w-8 text-blue-600" />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Real Estate Ticketing System</h1>
-                  <p className="text-sm text-gray-500">Manage and track all support tickets</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Link href="/admin">
-                  <Button variant="outline" size="sm" className="cursor-pointer">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Admin
-                  </Button>
-                </Link>
-                <Link href="/tickets/create">
-                  <Button className="cursor-pointer">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Ticket
-                  </Button>
-                </Link>
-              </div>
+        {/* Page Header */}
+        <div className="bg-white shadow-sm border-b px-6 py-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-sm text-gray-500">{totalTickets} tickets</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link href="/tickets/create">
+                <Button className="cursor-pointer">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Ticket
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
 
         {/* Status Filter Cards */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+        <div className="w-full px-6 py-2 flex-shrink-0">
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             {/* Total Card */}
             <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "all" ? "bg-slate-600 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "all" })}>
@@ -344,10 +306,19 @@ export default function Home() {
                 {getStatusCount("Overdue")}
               </span>
             </div>
+
+            {/* Closed Card */}
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-full cursor-pointer transition-all duration-200 ${filters.status === "Closed" ? "bg-gray-600 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`} onClick={() => setFilters({ ...filters, status: "Closed" })}>
+              <X className="h-4 w-4" />
+              <span className="text-sm font-medium">Closed</span>
+              <span className="text-sm font-bold" suppressHydrationWarning>
+                {getStatusCount("Closed")}
+              </span>
+            </div>
           </div>
 
           {/* Department Navigation */}
-          <div className="mb-4">
+          <div className="mb-2 flex-shrink-0">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-gray-900">Departments</h2>
               <div className="flex space-x-2">
@@ -371,43 +342,15 @@ export default function Home() {
               ))}
             </div>
           </div>
-
-          {/* Bulk Actions */}
-          {showBulkActions && (
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">{selectedTickets.size} ticket(s) selected</span>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleBulkAction("updateStatus")} className="cursor-pointer">
-                      Mark as Resolved
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setConfirmationAction({ type: "delete", ticketId: Array.from(selectedTickets)[0] });
-                        setShowConfirmation(true);
-                      }}
-                      className="cursor-pointer"
-                    >
-                      Delete Selected
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Tickets Table */}
-          <Card className="overflow-hidden p-0">
+          <Card className="overflow-hidden p-0 flex-1 flex flex-col">
             {/* Search and Filters Bar - Now part of the table area */}
-            <div className="px-4 py-2 border-b bg-gray-50">
+            <div className="px-4 py-1 border-b bg-gray-50 flex-shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <Input placeholder="Search tickets..." value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} className="h-8 w-48 text-xs" />
 
                 <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
-                  <SelectTrigger className="h-8 w-28 text-xs">
+                  <SelectTrigger className="h-8 w-28 text-xs cursor-pointer">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent>
@@ -430,7 +373,7 @@ export default function Home() {
                 {/* Advanced Date Filter */}
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-8 px-3 text-xs justify-start text-left font-normal">
+                    <Button variant="outline" className="h-8 px-3 text-xs justify-start text-left font-normal cursor-pointer">
                       <Filter className="h-3 w-3 mr-2" />
                       {filters.dateFilter.type === null ? (
                         "Date Filter"
@@ -456,7 +399,7 @@ export default function Home() {
                                 dateFilter: { type: "created", from: undefined, to: undefined },
                               })
                             }
-                            className="text-xs h-7 px-2"
+                            className="text-xs h-7 px-2 cursor-pointer"
                           >
                             Created Date
                           </Button>
@@ -469,7 +412,7 @@ export default function Home() {
                                 dateFilter: { type: "due", from: undefined, to: undefined },
                               })
                             }
-                            className="text-xs h-7 px-2"
+                            className="text-xs h-7 px-2 cursor-pointer"
                           >
                             Due Date
                           </Button>
@@ -537,7 +480,7 @@ export default function Home() {
                                 dateFilter: { type: null, from: undefined, to: undefined },
                               })
                             }
-                            className="w-full text-xs h-7"
+                            className="w-full text-xs h-7 cursor-pointer"
                           >
                             <X className="h-3 w-3 mr-1" />
                             Clear Date Filter
@@ -560,7 +503,7 @@ export default function Home() {
                         dateFilter: { type: null, from: undefined, to: undefined },
                       })
                     }
-                    className="h-8 text-xs"
+                    className="h-8 text-xs cursor-pointer"
                   >
                     <X className="h-3 w-3 mr-1" />
                     Clear
@@ -568,12 +511,11 @@ export default function Home() {
                 )}
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-auto flex-1 max-h-[calc(100vh-360px)]">
               <table className="w-full min-w-[1400px]">
                 {/* Header Row */}
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="w-8 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
                     {selectedDepartment === "All" && <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>}
                     <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket ID</th>
                     <th className="w-48 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</th>
@@ -589,18 +531,16 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredTickets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((ticket) => {
+                  {paginatedTickets.map((ticket) => {
                     const isOverdueTicket = ticket.status === "Overdue";
                     const isResolved = ticket.status === "Resolved";
+                    const isClosed = ticket.status === "Closed";
 
                     return (
-                      <tr key={ticket.id} className={`hover:bg-gray-50 transition-colors ${isOverdueTicket ? "bg-red-50 hover:bg-red-100" : isResolved ? "bg-green-50 hover:bg-green-100" : ""}`}>
-                        <td className="px-3 py-2">
-                          <input type="checkbox" checked={selectedTickets.has(ticket.id)} onChange={(e) => handleTicketSelection(ticket.id, e.target.checked)} className="rounded border-gray-300" />
-                        </td>
+                      <tr key={ticket.id} className={`hover:bg-gray-50 transition-colors ${isOverdueTicket ? "bg-red-50 hover:bg-red-100" : isResolved ? "bg-green-50 hover:bg-green-100" : isClosed ? "bg-gray-100 hover:bg-gray-200" : ""}`}>
                         {selectedDepartment === "All" && <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{ticket.department}</td>}
                         <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                          <button onClick={() => handleTicketIdClick(ticket)} className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
+                          <button onClick={() => handleTicketIdClick(ticket)} className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors cursor-pointer">
                             {getTicketNumber(ticket.id)}
                           </button>
                         </td>
@@ -695,6 +635,11 @@ export default function Home() {
                               return <span className="text-green-600 font-medium">Resolved</span>;
                             }
 
+                            // If ticket is closed, show "Closed" instead of counting days
+                            if (ticket.status === "Closed") {
+                              return <span className="text-gray-600 font-medium">Closed</span>;
+                            }
+
                             const daysLeft = getDaysUntilDue(ticket.dueDate);
                             if (daysLeft < 0) {
                               return <span className="text-red-600 font-medium">Overdue</span>;
@@ -727,17 +672,19 @@ export default function Home() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setConfirmationAction({ type: "delete", ticketId: ticket.id });
-                                setShowConfirmation(true);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {ticket.status !== "Closed" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setConfirmationAction({ type: "close", ticketId: ticket.id });
+                                  setShowConfirmation(true);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -749,21 +696,60 @@ export default function Home() {
           </Card>
 
           {/* Pagination */}
-          {filteredTickets.length > itemsPerPage && (
-            <div className="mt-6 flex items-center justify-between">
-              <div className="text-sm text-gray-700" suppressHydrationWarning>
-                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTickets.length)} of {filteredTickets.length} results
-              </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(Math.ceil(filteredTickets.length / itemsPerPage), currentPage + 1))} disabled={currentPage === Math.ceil(filteredTickets.length / itemsPerPage)}>
-                  Next
-                </Button>
-              </div>
+          <div className="mt-6 flex items-center justify-between">
+            <div className="text-sm text-gray-700" suppressHydrationWarning>
+              Showing {startIndex + 1} to {Math.min(endIndex, totalTickets)} of {totalTickets} tickets
             </div>
-          )}
+
+            {/* Tickets per page selector in the middle */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-700">Show:</span>
+              <Select value={ticketsPerPage.toString()} onValueChange={handleTicketsPerPageChange}>
+                <SelectTrigger className="w-20 h-6 text-xs cursor-pointer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-gray-700">per page</span>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="cursor-pointer">
+                Previous
+              </Button>
+
+              {/* Page numbers */}
+              <div className="flex space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button key={pageNum} variant={currentPage === pageNum ? "default" : "outline"} size="sm" onClick={() => handlePageChange(pageNum)} className="cursor-pointer">
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="cursor-pointer">
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Confirmation Modal */}
@@ -774,12 +760,12 @@ export default function Home() {
             setConfirmationAction(null);
           }}
           onConfirm={() => {
-            if (confirmationAction?.type === "delete") {
-              handleDeleteTicket(confirmationAction.ticketId);
+            if (confirmationAction?.type === "close") {
+              handleCloseTicket(confirmationAction.ticketId);
             }
           }}
           title="Confirm Action"
-          description={`Are you sure you want to ${confirmationAction?.type === "delete" ? "delete" : "update"} this ticket?`}
+          description={`Are you sure you want to ${confirmationAction?.type === "close" ? "close" : "update"} this ticket?`}
           variant="destructive"
         />
       </div>

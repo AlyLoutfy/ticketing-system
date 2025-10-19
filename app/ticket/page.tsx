@@ -35,7 +35,7 @@ function TicketPageContent() {
     ticketType: "",
     clientName: "",
     unitId: "",
-    status: "Open" as "Open" | "In Progress" | "Resolved" | "Rejected" | "Overdue",
+    status: "Open" as "Open" | "In Progress" | "Resolved" | "Rejected" | "Overdue" | "Closed",
     description: "",
   });
 
@@ -303,7 +303,7 @@ function TicketPageContent() {
 
                   <div className="space-y-3">
                     <Label htmlFor="status">Status *</Label>
-                    <Select value={formData.status} onValueChange={(value: "Open" | "In Progress" | "Resolved" | "Rejected") => setFormData((prev) => ({ ...prev, status: value }))}>
+                    <Select value={formData.status} onValueChange={(value: "Open" | "In Progress" | "Resolved" | "Rejected" | "Closed") => setFormData((prev) => ({ ...prev, status: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -312,6 +312,7 @@ function TicketPageContent() {
                         <SelectItem value="In Progress">In Progress</SelectItem>
                         <SelectItem value="Resolved">Resolved</SelectItem>
                         <SelectItem value="Rejected">Rejected</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

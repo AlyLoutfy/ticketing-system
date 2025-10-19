@@ -318,443 +318,460 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button variant="outline" size="sm" className="cursor-pointer">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Tickets
-            </Button>
-          </Link>
+    <div className="h-full flex flex-col">
+      {/* Page Header */}
+      <div className="bg-white shadow-sm border-b px-6 py-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-gray-600 mt-2">Manage departments and ticket types</p>
+            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-sm text-gray-500">Manage departments and ticket types</p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/admin/workflows">
-            <Button variant="outline" className="cursor-pointer">
-              <WorkflowIcon className="w-4 h-4 mr-2" />
-              Manage Workflows
-            </Button>
-          </Link>
-          <Link href="/tickets/create">
-            <Button className="cursor-pointer">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Ticket
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            {/* Reseed button hidden for production */}
+            {/* <Button 
+              variant="outline" 
+              onClick={async () => {
+                if (confirm("This will clear all existing tickets and create new sample tickets. Continue?")) {
+                  try {
+                    await storage.reseedSampleTickets();
+                    alert("Tickets reseeded successfully! Refreshing page...");
+                    window.location.reload();
+                  } catch (error) {
+                    console.error("Error reseeding tickets:", error);
+                    alert("Error reseeding tickets. Check console for details.");
+                  }
+                }
+              }}
+              className="cursor-pointer"
+            >
+              🔄 Reseed Tickets
+            </Button> */}
+            <Link href="/admin/workflows">
+              <Button variant="outline" className="cursor-pointer">
+                <WorkflowIcon className="w-4 h-4 mr-2" />
+                Manage Workflows
+              </Button>
+            </Link>
+            <Link href="/tickets/create">
+              <Button className="cursor-pointer">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Ticket
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      {!isSeeded && (
-        <Card className="mb-6 border-amber-200 bg-amber-50">
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto p-6">
+        {!isSeeded && (
+          <Card className="mb-6 border-amber-200 bg-amber-50">
+            <CardHeader>
+              <CardTitle className="text-amber-800">Setup Required</CardTitle>
+              <CardDescription className="text-amber-700">No departments found. Click below to seed the database with data from Excel files.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={seedData} className="bg-amber-600 hover:bg-amber-700">
+                <Settings className="w-4 h-4 mr-2" />
+                Seed Database
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+          <Card className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Departments</p>
+                <p className="text-lg font-bold">{departments.length}</p>
+              </div>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </Card>
+
+          <Card className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Ticket Types</p>
+                <p className="text-lg font-bold">{totalTicketTypes}</p>
+              </div>
+              <Ticket className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </Card>
+
+          <Card className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Workflows</p>
+                <p className="text-lg font-bold">{workflows.length}</p>
+              </div>
+              <WorkflowIcon className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </Card>
+        </div>
+
+        <Card>
           <CardHeader>
-            <CardTitle className="text-amber-800">Setup Required</CardTitle>
-            <CardDescription className="text-amber-700">No departments found. Click below to seed the database with data from Excel files.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={seedData} className="bg-amber-600 hover:bg-amber-700">
-              <Settings className="w-4 h-4 mr-2" />
-              Seed Database
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-        <Card className="p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Departments</p>
-              <p className="text-lg font-bold">{departments.length}</p>
-            </div>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </Card>
-
-        <Card className="p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Ticket Types</p>
-              <p className="text-lg font-bold">{totalTicketTypes}</p>
-            </div>
-            <Ticket className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </Card>
-
-        <Card className="p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Workflows</p>
-              <p className="text-lg font-bold">{workflows.length}</p>
-            </div>
-            <WorkflowIcon className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Departments Overview</CardTitle>
-              <CardDescription>Manage departments and their ticket types</CardDescription>
-            </div>
-            <Dialog open={showDeptDialog} onOpenChange={setShowDeptDialog}>
-              <DialogTrigger asChild>
-                <Button
-                  onClick={() => {
-                    setEditingDept(null);
-                    setDeptFormData({ name: "", description: "", subCategories: [] });
-                    setNewSubCategory("");
-                    setEditingSubCategory(null);
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Department
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingDept ? "Edit Department" : "Add New Department"}</DialogTitle>
-                  <DialogDescription>{editingDept ? "Update the department information" : "Create a new department for organizing ticket types"}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <Label htmlFor="deptName">Department Name *</Label>
-                    <Input id="deptName" value={deptFormData.name} onChange={(e) => setDeptFormData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Enter department name" />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label>Sub-Categories</Label>
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="Add sub-category" onKeyPress={(e) => e.key === "Enter" && addSubCategory()} />
-                        <Button type="button" onClick={addSubCategory} size="sm">
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      {(deptFormData.subCategories || []).length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {(deptFormData.subCategories || []).map((subCat, index) => (
-                            <div key={index} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-sm">
-                              {editingSubCategory?.index === index ? (
-                                <>
-                                  <Input
-                                    value={editingSubCategory.value}
-                                    onChange={(e) => setEditingSubCategory({ index, value: e.target.value })}
-                                    onKeyPress={(e) => {
-                                      if (e.key === "Enter") saveSubCategoryEdit();
-                                      if (e.key === "Escape") cancelSubCategoryEdit();
-                                    }}
-                                    className="h-6 text-xs px-1 py-0"
-                                    autoFocus
-                                  />
-                                  <button type="button" onClick={saveSubCategoryEdit} className="text-green-600 hover:text-green-700" title="Save">
-                                    <Check className="w-3 h-3" />
-                                  </button>
-                                  <button type="button" onClick={cancelSubCategoryEdit} className="text-gray-500 hover:text-gray-700" title="Cancel">
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <span>{subCat}</span>
-                                  <button type="button" onClick={() => startEditingSubCategory(index, subCat)} className="text-blue-500 hover:text-blue-700" title="Edit">
-                                    <Edit className="w-3 h-3" />
-                                  </button>
-                                  <button type="button" onClick={() => removeSubCategory(subCat)} className="text-red-500 hover:text-red-700" title="Remove">
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Departments Overview</CardTitle>
+                <CardDescription>Manage departments and their ticket types</CardDescription>
+              </div>
+              <Dialog open={showDeptDialog} onOpenChange={setShowDeptDialog}>
+                <DialogTrigger asChild>
                   <Button
-                    variant="outline"
                     onClick={() => {
-                      setShowDeptDialog(false);
+                      setEditingDept(null);
+                      setDeptFormData({ name: "", description: "", subCategories: [] });
+                      setNewSubCategory("");
                       setEditingSubCategory(null);
                     }}
                   >
-                    Cancel
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Department
                   </Button>
-                  <Button onClick={editingDept ? handleUpdateDepartment : handleCreateDepartment}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {editingDept ? "Update" : "Create"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {departments.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No departments found</h3>
-              <p className="text-gray-600 mb-4">Get started by seeding the database with your Excel data or creating a new department.</p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={seedData}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Seed Database
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingDept(null);
-                    setDeptFormData({ name: "", description: "", subCategories: [] });
-                    setNewSubCategory("");
-                    setEditingSubCategory(null);
-                    setShowDeptDialog(true);
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Department
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {departments.map((department) => {
-                const isExpanded = expandedDepartments.has(department.id);
-                const isEditing = editingTicketTypes[department.id] !== undefined;
-                const hasChanges = hasUnsavedChanges[department.id];
-                const ticketTypes = isEditing ? editingTicketTypes[department.id] : department.ticketTypes;
-
-                return (
-                  <div key={department.id} className="border rounded-lg">
-                    {/* Department Header */}
-                    <div className="p-4 border-b bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => toggleDepartment(department.id)}>
-                          <div className="p-1">{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</div>
-                          <div>
-                            <h3 className="font-semibold text-lg">{department.name}</h3>
-                            <p className="text-sm text-gray-600">{department.ticketTypes.length} ticket types</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {isEditing ? (
-                            <>
-                              <Button variant="outline" size="sm" onClick={() => cancelEditingDepartment(department.id)} className="cursor-pointer">
-                                Cancel
-                              </Button>
-                              <Button size="sm" onClick={() => saveDepartmentChanges(department.id)} disabled={!hasChanges} className="cursor-pointer">
-                                <Save className="w-4 h-4 mr-2" />
-                                Save Changes
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingDept(department);
-                                  setDeptFormData({
-                                    name: department.name,
-                                    description: "",
-                                    subCategories: department.subCategories || [],
-                                  });
-                                  setNewSubCategory("");
-                                  setEditingSubCategory(null);
-                                  setShowDeptDialog(true);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleDeleteDepartment(department.id)} className="cursor-pointer">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingDept ? "Edit Department" : "Add New Department"}</DialogTitle>
+                    <DialogDescription>{editingDept ? "Update the department information" : "Create a new department for organizing ticket types"}</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="deptName">Department Name *</Label>
+                      <Input id="deptName" value={deptFormData.name} onChange={(e) => setDeptFormData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Enter department name" />
                     </div>
 
-                    {/* Expandable Content */}
-                    {isExpanded && (
-                      <div className="p-4">
-                        {isEditing ? (
-                          <div className="space-y-4">
-                            <h4 className="text-lg font-semibold text-gray-900">Ticket Types</h4>
-
-                            <div className="bg-white border border-gray-300 overflow-hidden">
-                              <div className="overflow-x-auto">
-                                <table className="w-full border-collapse">
-                                  <thead>
-                                    <tr className="bg-gray-100">
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Name</th>
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Sub-Category</th>
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">SLA (Calculated)</th>
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">Priority</th>
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Workflow</th>
-                                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Description</th>
-                                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-20">Actions</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {ticketTypes.map((type, index) => (
-                                      <tr key={type.id} className="hover:bg-blue-50 transition-colors">
-                                        <td className="border-r border-gray-300 p-0">
-                                          <Input value={type.name} onChange={(e) => updateTicketTypeInEdit(department.id, index, "name", e.target.value)} placeholder="Ticket type name" className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none" />
-                                        </td>
-                                        <td className="border-r border-gray-300 p-0">
-                                          <Select value={type.subCategory || "General"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "subCategory", value)}>
-                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {(department.subCategories || []).map((category) => (
-                                                <SelectItem key={category} value={category}>
-                                                  {category}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </td>
-                                        <td className="border-r border-gray-300 p-0">
-                                          <div className="px-3 py-2 text-sm text-gray-600 h-8 flex items-center">
-                                            <WorkflowSLADisplay workflowId={type.workflowId} workflows={workflows} />
-                                          </div>
-                                        </td>
-                                        <td className="border-r border-gray-300 p-0">
-                                          <Select value={type.priority || "Medium"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "priority", value)}>
-                                            <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="Low" className="bg-green-50 text-green-700 hover:bg-green-100 w-full">
-                                                Low
-                                              </SelectItem>
-                                              <SelectItem value="Medium" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 w-full">
-                                                Medium
-                                              </SelectItem>
-                                              <SelectItem value="High" className="bg-orange-50 text-orange-700 hover:bg-orange-100 w-full">
-                                                High
-                                              </SelectItem>
-                                              <SelectItem value="Critical" className="bg-red-50 text-red-700 hover:bg-red-100 w-full">
-                                                Critical
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </td>
-                                        <td className="border-r border-gray-300 p-0">
-                                          <WorkflowSelect value={type.workflowId || "none"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "workflowId", value === "none" ? "" : value)} workflows={workflows} className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none" />
-                                        </td>
-                                        <td className="border-r border-gray-300 p-0">
-                                          <Input value={type.description || ""} onChange={(e) => updateTicketTypeInEdit(department.id, index, "description", e.target.value)} placeholder="Optional description" className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none" />
-                                        </td>
-                                        <td className="p-0 text-center">
-                                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-none" onClick={() => removeTicketTypeFromEdit(department.id, index)}>
-                                            <Trash2 className="w-3 h-3" />
-                                          </Button>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                    <div className="space-y-3">
+                      <Label>Sub-Categories</Label>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="Add sub-category" onKeyPress={(e) => e.key === "Enter" && addSubCategory()} />
+                          <Button type="button" onClick={addSubCategory} size="sm">
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        {(deptFormData.subCategories || []).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {(deptFormData.subCategories || []).map((subCat, index) => (
+                              <div key={index} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-sm">
+                                {editingSubCategory?.index === index ? (
+                                  <>
+                                    <Input
+                                      value={editingSubCategory.value}
+                                      onChange={(e) => setEditingSubCategory({ index, value: e.target.value })}
+                                      onKeyPress={(e) => {
+                                        if (e.key === "Enter") saveSubCategoryEdit();
+                                        if (e.key === "Escape") cancelSubCategoryEdit();
+                                      }}
+                                      className="h-6 text-xs px-1 py-0"
+                                      autoFocus
+                                    />
+                                    <button type="button" onClick={saveSubCategoryEdit} className="text-green-600 hover:text-green-700" title="Save">
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button type="button" onClick={cancelSubCategoryEdit} className="text-gray-500 hover:text-gray-700" title="Cancel">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>{subCat}</span>
+                                    <button type="button" onClick={() => startEditingSubCategory(index, subCat)} className="text-blue-500 hover:text-blue-700" title="Edit">
+                                      <Edit className="w-3 h-3" />
+                                    </button>
+                                    <button type="button" onClick={() => removeSubCategory(subCat)} className="text-red-500 hover:text-red-700" title="Remove">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowDeptDialog(false);
+                        setEditingSubCategory(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={editingDept ? handleUpdateDepartment : handleCreateDepartment}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {editingDept ? "Update" : "Create"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {departments.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No departments found</h3>
+                <p className="text-gray-600 mb-4">Get started by seeding the database with your Excel data or creating a new department.</p>
+                <div className="flex gap-2 justify-center">
+                  <Button onClick={seedData}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Seed Database
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingDept(null);
+                      setDeptFormData({ name: "", description: "", subCategories: [] });
+                      setNewSubCategory("");
+                      setEditingSubCategory(null);
+                      setShowDeptDialog(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Department
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {departments.map((department) => {
+                  const isExpanded = expandedDepartments.has(department.id);
+                  const isEditing = editingTicketTypes[department.id] !== undefined;
+                  const hasChanges = hasUnsavedChanges[department.id];
+                  const ticketTypes = isEditing ? editingTicketTypes[department.id] : department.ticketTypes;
 
-                              {ticketTypes.length === 0 && (
-                                <div className="text-center py-12">
-                                  <div className="text-gray-400 mb-4">
-                                    <Plus className="w-12 h-12 mx-auto" />
-                                  </div>
-                                  <p className="text-gray-600 font-medium">No ticket types yet</p>
-                                  <p className="text-sm text-gray-500">Click &quot;Add Ticket Type&quot; to create your first one</p>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex justify-center">
-                              <Button variant="outline" size="sm" onClick={() => addNewTicketTypeRow(department.id)} className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Ticket Type
-                              </Button>
+                  return (
+                    <div key={department.id} className="border rounded-lg">
+                      {/* Department Header */}
+                      <div className="p-4 border-b bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => toggleDepartment(department.id)}>
+                            <div className="p-1">{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</div>
+                            <div>
+                              <h3 className="font-semibold text-lg">{department.name}</h3>
+                              <p className="text-sm text-gray-600">{department.ticketTypes.length} ticket types</p>
                             </div>
                           </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-lg font-semibold text-gray-900">Ticket Types ({department.ticketTypes.length})</h4>
-                              <Button variant="outline" size="sm" onClick={() => startEditingDepartment(department)} className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer">
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Ticket Types
-                              </Button>
-                            </div>
+                          <div className="flex gap-2">
+                            {isEditing ? (
+                              <>
+                                <Button variant="outline" size="sm" onClick={() => cancelEditingDepartment(department.id)} className="cursor-pointer">
+                                  Cancel
+                                </Button>
+                                <Button size="sm" onClick={() => saveDepartmentChanges(department.id)} disabled={!hasChanges} className="cursor-pointer">
+                                  <Save className="w-4 h-4 mr-2" />
+                                  Save Changes
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingDept(department);
+                                    setDeptFormData({
+                                      name: department.name,
+                                      description: "",
+                                      subCategories: department.subCategories || [],
+                                    });
+                                    setNewSubCategory("");
+                                    setEditingSubCategory(null);
+                                    setShowDeptDialog(true);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleDeleteDepartment(department.id)} className="cursor-pointer">
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
-                            {department.ticketTypes.length > 0 ? (
-                              <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                      {/* Expandable Content */}
+                      {isExpanded && (
+                        <div className="p-4">
+                          {isEditing ? (
+                            <div className="space-y-4">
+                              <h4 className="text-lg font-semibold text-gray-900">Ticket Types</h4>
+
+                              <div className="bg-white border border-gray-300 overflow-hidden">
                                 <div className="overflow-x-auto">
-                                  <table className="w-full">
-                                    <thead className="bg-gray-50 border-b border-gray-200">
-                                      <tr>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Name</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Sub-Category</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">SLA</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Priority</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Workflow</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Description</th>
+                                  <table className="w-full border-collapse">
+                                    <thead>
+                                      <tr className="bg-gray-100">
+                                        <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Name</th>
+                                        <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Sub-Category</th>
+                                        <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">SLA (Calculated)</th>
+                                        <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">Priority</th>
+                                        <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">Workflow</th>
+                                        <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">Description</th>
+                                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-20">Actions</th>
                                       </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                      {department.ticketTypes.map((type) => (
-                                        <tr key={type.id} className="hover:bg-gray-50 transition-colors">
-                                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{type.name}</td>
-                                          <td className="px-4 py-3 text-sm text-gray-600">{type.subCategory || "-"}</td>
-                                          <td className="px-4 py-3 text-sm text-gray-900">
-                                            <WorkflowSLADisplay workflowId={type.workflowId} workflows={workflows} />
+                                    <tbody>
+                                      {ticketTypes.map((type, index) => (
+                                        <tr key={type.id} className="hover:bg-blue-50 transition-colors">
+                                          <td className="border-r border-gray-300 p-0">
+                                            <Input value={type.name} onChange={(e) => updateTicketTypeInEdit(department.id, index, "name", e.target.value)} placeholder="Ticket type name" className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none" />
                                           </td>
-                                          <td className="px-4 py-3">
-                                            <Badge variant={type.priority === "Critical" ? "destructive" : type.priority === "High" ? "default" : "secondary"}>{type.priority || "Medium"}</Badge>
+                                          <td className="border-r border-gray-300 p-0">
+                                            <Select value={type.subCategory || "General"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "subCategory", value)}>
+                                              <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {(department.subCategories || []).map((category) => (
+                                                  <SelectItem key={category} value={category}>
+                                                    {category}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
                                           </td>
-                                          <td className="px-4 py-3 text-sm">
-                                            <button onClick={() => handleWorkflowClick(type.workflowId)} className={`font-medium transition-colors cursor-pointer ${type.workflowId ? "text-blue-600 hover:text-blue-800 hover:underline" : "text-gray-600"}`}>
-                                              {getWorkflowName(type.workflowId)}
-                                            </button>
+                                          <td className="border-r border-gray-300 p-0">
+                                            <div className="px-3 py-2 text-sm text-gray-600 h-8 flex items-center">
+                                              <WorkflowSLADisplay workflowId={type.workflowId} workflows={workflows} />
+                                            </div>
                                           </td>
-                                          <td className="px-4 py-3 text-sm text-gray-600">{type.description || "-"}</td>
+                                          <td className="border-r border-gray-300 p-0">
+                                            <Select value={type.priority || "Medium"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "priority", value)}>
+                                              <SelectTrigger className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="Low" className="bg-green-50 text-green-700 hover:bg-green-100 w-full">
+                                                  Low
+                                                </SelectItem>
+                                                <SelectItem value="Medium" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 w-full">
+                                                  Medium
+                                                </SelectItem>
+                                                <SelectItem value="High" className="bg-orange-50 text-orange-700 hover:bg-orange-100 w-full">
+                                                  High
+                                                </SelectItem>
+                                                <SelectItem value="Critical" className="bg-red-50 text-red-700 hover:bg-red-100 w-full">
+                                                  Critical
+                                                </SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </td>
+                                          <td className="border-r border-gray-300 p-0">
+                                            <WorkflowSelect value={type.workflowId || "none"} onValueChange={(value) => updateTicketTypeInEdit(department.id, index, "workflowId", value === "none" ? "" : value)} workflows={workflows} className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 shadow-none rounded-none" />
+                                          </td>
+                                          <td className="border-r border-gray-300 p-0">
+                                            <Input value={type.description || ""} onChange={(e) => updateTicketTypeInEdit(department.id, index, "description", e.target.value)} placeholder="Optional description" className="h-8 w-full border-0 bg-transparent px-3 py-2 text-sm focus:ring-0 focus:outline-none focus:bg-blue-100 rounded-none" />
+                                          </td>
+                                          <td className="p-0 text-center">
+                                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-none" onClick={() => removeTicketTypeFromEdit(department.id, index)}>
+                                              <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                          </td>
                                         </tr>
                                       ))}
                                     </tbody>
                                   </table>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                                <div className="text-center py-12">
-                                  <div className="text-gray-400 mb-4">
-                                    <Edit className="w-12 h-12 mx-auto" />
+
+                                {ticketTypes.length === 0 && (
+                                  <div className="text-center py-12">
+                                    <div className="text-gray-400 mb-4">
+                                      <Plus className="w-12 h-12 mx-auto" />
+                                    </div>
+                                    <p className="text-gray-600 font-medium">No ticket types yet</p>
+                                    <p className="text-sm text-gray-500">Click &quot;Add Ticket Type&quot; to create your first one</p>
                                   </div>
-                                  <p className="text-gray-600 font-medium">No ticket types yet</p>
-                                  <p className="text-sm text-gray-500">Click &quot;Edit Ticket Types&quot; to add some</p>
-                                </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                              <div className="flex justify-center">
+                                <Button variant="outline" size="sm" onClick={() => addNewTicketTypeRow(department.id)} className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer">
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add Ticket Type
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-lg font-semibold text-gray-900">Ticket Types ({department.ticketTypes.length})</h4>
+                                <Button variant="outline" size="sm" onClick={() => startEditingDepartment(department)} className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Ticket Types
+                                </Button>
+                              </div>
+
+                              {department.ticketTypes.length > 0 ? (
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                      <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Name</th>
+                                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Sub-Category</th>
+                                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">SLA</th>
+                                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">Priority</th>
+                                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Workflow</th>
+                                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Description</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="bg-white divide-y divide-gray-200">
+                                        {department.ticketTypes.map((type) => (
+                                          <tr key={type.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{type.name}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-600">{type.subCategory || "-"}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                              <WorkflowSLADisplay workflowId={type.workflowId} workflows={workflows} />
+                                            </td>
+                                            <td className="px-4 py-3">
+                                              <Badge variant={type.priority === "Critical" ? "destructive" : type.priority === "High" ? "default" : "secondary"}>{type.priority || "Medium"}</Badge>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                              <button onClick={() => handleWorkflowClick(type.workflowId)} className={`font-medium transition-colors cursor-pointer ${type.workflowId ? "text-blue-600 hover:text-blue-800 hover:underline" : "text-gray-600"}`}>
+                                                {getWorkflowName(type.workflowId)}
+                                              </button>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-600">{type.description || "-"}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                                  <div className="text-center py-12">
+                                    <div className="text-gray-400 mb-4">
+                                      <Edit className="w-12 h-12 mx-auto" />
+                                    </div>
+                                    <p className="text-gray-600 font-medium">No ticket types yet</p>
+                                    <p className="text-sm text-gray-500">Click &quot;Edit Ticket Types&quot; to add some</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

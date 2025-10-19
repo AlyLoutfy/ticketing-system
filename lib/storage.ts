@@ -35,7 +35,7 @@ export interface Ticket {
   unitId?: string;
   workingDays: number;
   priority: string;
-  status: "Open" | "In Progress" | "Resolved" | "Rejected" | "Overdue";
+  status: "Open" | "In Progress" | "Resolved" | "Rejected" | "Overdue" | "Closed";
   description?: string;
   ticketOwner: string;
   currentWorkflowStep?: number;
@@ -461,7 +461,7 @@ class IndexedDBStorage {
         const ticketsToUpdate: Ticket[] = [];
 
         for (const ticket of tickets) {
-          if (ticket.dueDate < now && ticket.status !== "Resolved" && ticket.status !== "Rejected" && ticket.status !== "Overdue") {
+          if (ticket.dueDate < now && ticket.status !== "Resolved" && ticket.status !== "Rejected" && ticket.status !== "Overdue" && ticket.status !== "Closed") {
             const updatedTicket = { ...ticket, status: "Overdue" as const, updatedAt: now };
             ticketsToUpdate.push(updatedTicket);
           }
@@ -584,16 +584,33 @@ class IndexedDBStorage {
     });
   }
 
-  async deleteTicket(id: string): Promise<void> {
+  async closeTicket(id: string): Promise<void> {
     const db = this.ensureDB();
     if (!db) throw new Error("Database not available");
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["tickets"], "readwrite");
       const store = transaction.objectStore("tickets");
-      const request = store.delete(id);
+      const getRequest = store.get(id);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error!);
+      getRequest.onsuccess = () => {
+        const ticket = getRequest.result;
+        if (!ticket) {
+          reject(new Error("Ticket not found"));
+          return;
+        }
+
+        const updatedTicket = {
+          ...ticket,
+          status: "Closed" as const,
+          updatedAt: new Date(),
+        };
+
+        const putRequest = store.put(updatedTicket);
+        putRequest.onsuccess = () => resolve();
+        putRequest.onerror = () => reject(putRequest.error!);
+      };
+
+      getRequest.onerror = () => reject(getRequest.error!);
     });
   }
 
@@ -706,6 +723,32 @@ class IndexedDBStorage {
       return;
     }
 
+    await this.seedAllSampleTickets();
+  }
+
+  // Force reseed all sample tickets (clears existing and creates new ones)
+  async reseedSampleTickets(): Promise<void> {
+    await this.clearAllTickets();
+    await this.seedAllSampleTickets();
+  }
+
+  // Clear all tickets from database
+  async clearAllTickets(): Promise<void> {
+    const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["tickets"], "readwrite");
+      const store = transaction.objectStore("tickets");
+      const clearRequest = store.clear();
+
+      clearRequest.onsuccess = () => resolve();
+      clearRequest.onerror = () => reject(clearRequest.error!);
+    });
+  }
+
+  // Internal method to seed all sample tickets
+  private async seedAllSampleTickets(): Promise<void> {
     const departments = await this.getDepartments();
     if (departments.length === 0) {
       return;
@@ -831,6 +874,688 @@ class IndexedDBStorage {
         priority: "Medium" as const,
         status: "In Progress" as const,
         description: "Gym membership renewal and facility access",
+      },
+      // Additional test tickets for scrolling demonstration
+      {
+        department: "Collection",
+        ticketType: "Payment Issue",
+        clientName: "Amina Khalil",
+        ticketOwner: "Collection Team",
+        workingDays: 4,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Payment processing error needs resolution",
+      },
+      {
+        department: "Customer Care",
+        ticketType: "Complaint",
+        clientName: "Tarek Mansour",
+        ticketOwner: "Customer Care",
+        workingDays: 2,
+        priority: "Critical" as const,
+        status: "In Progress" as const,
+        description: "Service quality complaint from resident",
+      },
+      {
+        department: "FM (Facilities Management)",
+        ticketType: "Repair Request",
+        clientName: "Nadia Salem",
+        ticketOwner: "Maintenance Team",
+        workingDays: 5,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Elevator repair request for building B",
+      },
+      {
+        department: "Security",
+        ticketType: "Access Card",
+        clientName: "Rami Fawzy",
+        ticketOwner: "Security Team",
+        workingDays: 1,
+        priority: "High" as const,
+        status: "Resolved" as const,
+        description: "New access card issued for resident",
+      },
+      {
+        department: "Contracts",
+        ticketType: "Contract Amendment",
+        clientName: "Sara Mahmoud",
+        ticketOwner: "Legal Team",
+        workingDays: 7,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Contract amendment for unit 301",
+      },
+      {
+        department: "TCR",
+        ticketType: "Renovation Permit",
+        clientName: "Ahmed Zaki",
+        ticketOwner: "TCR Team",
+        workingDays: 3,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Renovation permit application for unit 402",
+      },
+      {
+        department: "HO (Handover)",
+        ticketType: "Unit Inspection",
+        clientName: "Lina Ashraf",
+        ticketOwner: "Handover Team",
+        workingDays: 2,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Pre-handover inspection for unit 203",
+      },
+      {
+        department: "CM (Community Management)",
+        ticketType: "Event Planning",
+        clientName: "Mohamed Taha",
+        ticketOwner: "Community Team",
+        workingDays: 10,
+        priority: "Low" as const,
+        status: "Open" as const,
+        description: "Community event planning for residents",
+      },
+      {
+        department: "Resale & Rental",
+        ticketType: "Property Listing",
+        clientName: "Dina Farid",
+        ticketOwner: "Sales Team",
+        workingDays: 5,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "New property listing for unit 105",
+      },
+      {
+        department: "Collection",
+        ticketType: "Payment Plan",
+        clientName: "Omar Hassan",
+        ticketOwner: "Collection Team",
+        workingDays: 3,
+        priority: "High" as const,
+        status: "Closed" as const,
+        description: "Payment plan arrangement completed",
+      },
+      {
+        department: "Customer Care",
+        ticketType: "General Inquiry",
+        clientName: "Fatma Nour",
+        ticketOwner: "Customer Care",
+        workingDays: 1,
+        priority: "Low" as const,
+        status: "Resolved" as const,
+        description: "General inquiry about amenities",
+      },
+      {
+        department: "Sports",
+        ticketType: "Pool Access",
+        clientName: "Khaled Youssef",
+        ticketOwner: "Sports Team",
+        workingDays: 2,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Pool access request for family",
+      },
+      {
+        department: "Security",
+        ticketType: "Visitor Registration",
+        clientName: "Mona Gamal",
+        ticketOwner: "Security Team",
+        workingDays: 1,
+        priority: "Low" as const,
+        status: "Open" as const,
+        description: "Visitor registration for weekend",
+      },
+      {
+        department: "FM (Facilities Management)",
+        ticketType: "Cleaning Service",
+        clientName: "Hassan Ali",
+        ticketOwner: "Maintenance Team",
+        workingDays: 2,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Deep cleaning service request",
+      },
+      {
+        department: "Contracts",
+        ticketType: "Lease Renewal",
+        clientName: "Nour Ibrahim",
+        ticketOwner: "Legal Team",
+        workingDays: 5,
+        priority: "High" as const,
+        status: "In Progress" as const,
+        description: "Lease renewal for commercial unit",
+      },
+      {
+        department: "TCR",
+        ticketType: "Construction Permit",
+        clientName: "Tamer Mostafa",
+        ticketOwner: "TCR Team",
+        workingDays: 7,
+        priority: "Critical" as const,
+        status: "Open" as const,
+        description: "Construction permit for building extension",
+      },
+      {
+        department: "HO (Handover)",
+        ticketType: "Key Collection",
+        clientName: "Rania Samir",
+        ticketOwner: "Handover Team",
+        workingDays: 1,
+        priority: "High" as const,
+        status: "Resolved" as const,
+        description: "Key collection for new unit owner",
+      },
+      {
+        department: "CM (Community Management)",
+        ticketType: "Facility Booking",
+        clientName: "Wael Kamal",
+        ticketOwner: "Community Team",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Community hall booking for event",
+      },
+      {
+        department: "Resale & Rental",
+        ticketType: "Market Analysis",
+        clientName: "Heba Magdy",
+        ticketOwner: "Sales Team",
+        workingDays: 4,
+        priority: "Low" as const,
+        status: "In Progress" as const,
+        description: "Market analysis for property valuation",
+      },
+      // Additional tickets for better scrolling demonstration
+      {
+        department: "Collection",
+        ticketType: "Payment Follow-up",
+        clientName: "Yasmin Farouk",
+        ticketOwner: "Collection Team",
+        workingDays: 2,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Follow-up on overdue payment for unit 108",
+      },
+      {
+        department: "Customer Care",
+        ticketType: "Service Request",
+        clientName: "Adel Mansour",
+        ticketOwner: "Customer Care",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Service request for unit maintenance",
+      },
+      {
+        department: "FM (Facilities Management)",
+        ticketType: "HVAC Repair",
+        clientName: "Noha El-Sayed",
+        ticketOwner: "Maintenance Team",
+        workingDays: 4,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "HVAC system repair for building C",
+      },
+      {
+        department: "Security",
+        ticketType: "CCTV Issue",
+        clientName: "Mahmoud Gaber",
+        ticketOwner: "Security Team",
+        workingDays: 1,
+        priority: "Critical" as const,
+        status: "In Progress" as const,
+        description: "CCTV camera malfunction in parking area",
+      },
+      {
+        department: "Contracts",
+        ticketType: "Contract Review",
+        clientName: "Salma Ahmed",
+        ticketOwner: "Legal Team",
+        workingDays: 6,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Contract review for commercial lease",
+      },
+      {
+        department: "TCR",
+        ticketType: "Building Permit",
+        clientName: "Karim Hassan",
+        ticketOwner: "TCR Team",
+        workingDays: 8,
+        priority: "High" as const,
+        status: "In Progress" as const,
+        description: "Building permit for new construction",
+      },
+      {
+        department: "HO (Handover)",
+        ticketType: "Defect Report",
+        clientName: "Rana Mohamed",
+        ticketOwner: "Handover Team",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Defect report for unit 207",
+      },
+      {
+        department: "CM (Community Management)",
+        ticketType: "Event Coordination",
+        clientName: "Tarek El-Masry",
+        ticketOwner: "Community Team",
+        workingDays: 5,
+        priority: "Low" as const,
+        status: "In Progress" as const,
+        description: "Community event coordination",
+      },
+      {
+        department: "Resale & Rental",
+        ticketType: "Property Valuation",
+        clientName: "Dina El-Kady",
+        ticketOwner: "Sales Team",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Property valuation for resale",
+      },
+      {
+        department: "Collection",
+        ticketType: "Payment Plan",
+        clientName: "Ahmed El-Sherif",
+        ticketOwner: "Collection Team",
+        workingDays: 4,
+        priority: "High" as const,
+        status: "Closed" as const,
+        description: "Payment plan arrangement completed",
+      },
+      {
+        department: "Customer Care",
+        ticketType: "Complaint Resolution",
+        clientName: "Mona El-Hadidy",
+        ticketOwner: "Customer Care",
+        workingDays: 2,
+        priority: "Critical" as const,
+        status: "Resolved" as const,
+        description: "Complaint resolution for service issue",
+      },
+      {
+        department: "Sports",
+        ticketType: "Equipment Maintenance",
+        clientName: "Omar El-Naggar",
+        ticketOwner: "Sports Team",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Gym equipment maintenance request",
+      },
+      {
+        department: "Security",
+        ticketType: "Access Control",
+        clientName: "Layla El-Mahdy",
+        ticketOwner: "Security Team",
+        workingDays: 1,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Access control system update",
+      },
+      {
+        department: "FM (Facilities Management)",
+        ticketType: "Plumbing Repair",
+        clientName: "Hassan El-Sawy",
+        ticketOwner: "Maintenance Team",
+        workingDays: 2,
+        priority: "Critical" as const,
+        status: "In Progress" as const,
+        description: "Plumbing repair for unit 305",
+      },
+      {
+        department: "Contracts",
+        ticketType: "Lease Agreement",
+        clientName: "Nour El-Din",
+        ticketOwner: "Legal Team",
+        workingDays: 7,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "New lease agreement preparation",
+      },
+      {
+        department: "TCR",
+        ticketType: "Safety Inspection",
+        clientName: "Tamer El-Gamal",
+        ticketOwner: "TCR Team",
+        workingDays: 5,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Safety inspection for building D",
+      },
+      {
+        department: "HO (Handover)",
+        ticketType: "Final Inspection",
+        clientName: "Rania El-Sherbiny",
+        ticketOwner: "Handover Team",
+        workingDays: 2,
+        priority: "High" as const,
+        status: "Resolved" as const,
+        description: "Final inspection completed for unit 401",
+      },
+      {
+        department: "CM (Community Management)",
+        ticketType: "Facility Maintenance",
+        clientName: "Wael El-Masry",
+        ticketOwner: "Community Team",
+        workingDays: 4,
+        priority: "Low" as const,
+        status: "Open" as const,
+        description: "Community facility maintenance",
+      },
+      {
+        department: "Resale & Rental",
+        ticketType: "Market Research",
+        clientName: "Heba El-Sayed",
+        ticketOwner: "Sales Team",
+        workingDays: 6,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Market research for pricing strategy",
+      },
+      {
+        department: "Collection",
+        ticketType: "Payment Reminder",
+        clientName: "Youssef El-Khatib",
+        ticketOwner: "Collection Team",
+        workingDays: 1,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Payment reminder for unit 102",
+      },
+      {
+        department: "Customer Care",
+        ticketType: "Information Request",
+        clientName: "Fatma El-Zahra",
+        ticketOwner: "Customer Care",
+        workingDays: 1,
+        priority: "Low" as const,
+        status: "Resolved" as const,
+        description: "Information request about amenities",
+      },
+      {
+        department: "Sports",
+        ticketType: "Membership Renewal",
+        clientName: "Khaled El-Sherif",
+        ticketOwner: "Sports Team",
+        workingDays: 2,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Sports membership renewal process",
+      },
+      {
+        department: "Security",
+        ticketType: "Patrol Schedule",
+        clientName: "Mona El-Hadidy",
+        ticketOwner: "Security Team",
+        workingDays: 3,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Security patrol schedule update",
+      },
+      {
+        department: "FM (Facilities Management)",
+        ticketType: "Electrical Repair",
+        clientName: "Hassan El-Mahdy",
+        ticketOwner: "Maintenance Team",
+        workingDays: 4,
+        priority: "Critical" as const,
+        status: "In Progress" as const,
+        description: "Electrical repair for unit 208",
+      },
+      {
+        department: "Contracts",
+        ticketType: "Contract Termination",
+        clientName: "Nour El-Kady",
+        ticketOwner: "Legal Team",
+        workingDays: 5,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Contract termination process",
+      },
+      {
+        department: "TCR",
+        ticketType: "Environmental Assessment",
+        clientName: "Tamer El-Sherif",
+        ticketOwner: "TCR Team",
+        workingDays: 7,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Environmental assessment for new project",
+      },
+      {
+        department: "HO (Handover)",
+        ticketType: "Documentation",
+        clientName: "Rania El-Masry",
+        ticketOwner: "Handover Team",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "Resolved" as const,
+        description: "Handover documentation completed",
+      },
+      {
+        department: "CM (Community Management)",
+        ticketType: "Resident Survey",
+        clientName: "Wael El-Gamal",
+        ticketOwner: "Community Team",
+        workingDays: 4,
+        priority: "Low" as const,
+        status: "Open" as const,
+        description: "Resident satisfaction survey",
+      },
+      {
+        department: "Resale & Rental",
+        ticketType: "Property Marketing",
+        clientName: "Heba El-Naggar",
+        ticketOwner: "Sales Team",
+        workingDays: 5,
+        priority: "High" as const,
+        status: "In Progress" as const,
+        description: "Property marketing campaign",
+      },
+      {
+        department: "Collection",
+        ticketType: "Payment Verification",
+        clientName: "Youssef El-Sawy",
+        ticketOwner: "Collection Team",
+        workingDays: 2,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Payment verification for unit 304",
+      },
+      {
+        department: "Customer Care",
+        ticketType: "Feedback Collection",
+        clientName: "Fatma El-Mahdy",
+        ticketOwner: "Customer Care",
+        workingDays: 3,
+        priority: "Low" as const,
+        status: "In Progress" as const,
+        description: "Customer feedback collection",
+      },
+      {
+        department: "Sports",
+        ticketType: "Facility Booking",
+        clientName: "Khaled El-Khatib",
+        ticketOwner: "Sports Team",
+        workingDays: 2,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Sports facility booking request",
+      },
+      {
+        department: "Security",
+        ticketType: "Emergency Response",
+        clientName: "Mona El-Zahra",
+        ticketOwner: "Security Team",
+        workingDays: 1,
+        priority: "Critical" as const,
+        status: "Resolved" as const,
+        description: "Emergency response protocol activation",
+      },
+      {
+        department: "FM (Facilities Management)",
+        ticketType: "Landscaping",
+        clientName: "Hassan El-Sherif",
+        ticketOwner: "Maintenance Team",
+        workingDays: 6,
+        priority: "Low" as const,
+        status: "In Progress" as const,
+        description: "Landscaping maintenance for common areas",
+      },
+      {
+        department: "Contracts",
+        ticketType: "Legal Consultation",
+        clientName: "Nour El-Hadidy",
+        ticketOwner: "Legal Team",
+        workingDays: 4,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Legal consultation for contract dispute",
+      },
+      {
+        department: "TCR",
+        ticketType: "Compliance Check",
+        clientName: "Tamer El-Masry",
+        ticketOwner: "TCR Team",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Compliance check for building regulations",
+      },
+      {
+        department: "HO (Handover)",
+        ticketType: "Warranty Claim",
+        clientName: "Rania El-Gamal",
+        ticketOwner: "Handover Team",
+        workingDays: 4,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Warranty claim for unit defects",
+      },
+      {
+        department: "CM (Community Management)",
+        ticketType: "Community Rules",
+        clientName: "Wael El-Naggar",
+        ticketOwner: "Community Team",
+        workingDays: 5,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Community rules update and communication",
+      },
+      {
+        department: "Resale & Rental",
+        ticketType: "Tenant Screening",
+        clientName: "Heba El-Sawy",
+        ticketOwner: "Sales Team",
+        workingDays: 3,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Tenant screening for rental application",
+      },
+      {
+        department: "Collection",
+        ticketType: "Payment Reconciliation",
+        clientName: "Youssef El-Mahdy",
+        ticketOwner: "Collection Team",
+        workingDays: 2,
+        priority: "Medium" as const,
+        status: "Closed" as const,
+        description: "Payment reconciliation completed",
+      },
+      {
+        department: "Customer Care",
+        ticketType: "Service Improvement",
+        clientName: "Fatma El-Khatib",
+        ticketOwner: "Customer Care",
+        workingDays: 4,
+        priority: "Low" as const,
+        status: "In Progress" as const,
+        description: "Service improvement initiative",
+      },
+      {
+        department: "Sports",
+        ticketType: "Equipment Purchase",
+        clientName: "Khaled El-Zahra",
+        ticketOwner: "Sports Team",
+        workingDays: 7,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "New sports equipment purchase request",
+      },
+      {
+        department: "Security",
+        ticketType: "Training Program",
+        clientName: "Mona El-Sherif",
+        ticketOwner: "Security Team",
+        workingDays: 5,
+        priority: "High" as const,
+        status: "In Progress" as const,
+        description: "Security staff training program",
+      },
+      {
+        department: "FM (Facilities Management)",
+        ticketType: "Waste Management",
+        clientName: "Hassan El-Hadidy",
+        ticketOwner: "Maintenance Team",
+        workingDays: 3,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Waste management system improvement",
+      },
+      {
+        department: "Contracts",
+        ticketType: "Insurance Claim",
+        clientName: "Nour El-Masry",
+        ticketOwner: "Legal Team",
+        workingDays: 6,
+        priority: "High" as const,
+        status: "In Progress" as const,
+        description: "Insurance claim processing",
+      },
+      {
+        department: "TCR",
+        ticketType: "Quality Control",
+        clientName: "Tamer El-Gamal",
+        ticketOwner: "TCR Team",
+        workingDays: 4,
+        priority: "Medium" as const,
+        status: "Open" as const,
+        description: "Quality control inspection",
+      },
+      {
+        department: "HO (Handover)",
+        ticketType: "Customer Satisfaction",
+        clientName: "Rania El-Naggar",
+        ticketOwner: "Handover Team",
+        workingDays: 2,
+        priority: "Low" as const,
+        status: "Resolved" as const,
+        description: "Customer satisfaction survey completed",
+      },
+      {
+        department: "CM (Community Management)",
+        ticketType: "Event Management",
+        clientName: "Wael El-Sawy",
+        ticketOwner: "Community Team",
+        workingDays: 6,
+        priority: "Medium" as const,
+        status: "In Progress" as const,
+        description: "Community event management",
+      },
+      {
+        department: "Resale & Rental",
+        ticketType: "Market Analysis",
+        clientName: "Heba El-Mahdy",
+        ticketOwner: "Sales Team",
+        workingDays: 8,
+        priority: "High" as const,
+        status: "Open" as const,
+        description: "Comprehensive market analysis",
       },
     ];
 
