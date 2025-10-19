@@ -17,6 +17,7 @@ import { WorkflowProgressBadge } from "@/components/ui/workflow-progress-badge";
 import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
 import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Trash2, Check, Eye, Edit, Filter } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 // Helper function to check if text is truncated
 const isTextTruncated = (text: string, maxWidth: number) => {
@@ -26,6 +27,7 @@ const isTextTruncated = (text: string, maxWidth: number) => {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [workflowResolutions, setWorkflowResolutions] = useState<Map<string, WorkflowResolution[]>>(new Map());
@@ -245,7 +247,7 @@ export default function Home() {
   };
 
   const handleTicketIdClick = (ticket: Ticket) => {
-    window.location.href = `/ticket-details?id=${ticket.id}`;
+    router.push(`/ticket-details?id=${ticket.id}`);
   };
 
   if (loading || !mounted) {
