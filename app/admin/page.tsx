@@ -636,10 +636,18 @@ export default function AdminPage() {
                                               <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              <SelectItem value="Low">Low</SelectItem>
-                                              <SelectItem value="Medium">Medium</SelectItem>
-                                              <SelectItem value="High">High</SelectItem>
-                                              <SelectItem value="Critical">Critical</SelectItem>
+                                              <SelectItem value="Low" className="bg-green-50 text-green-700 hover:bg-green-100 w-full">
+                                                Low
+                                              </SelectItem>
+                                              <SelectItem value="Medium" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 w-full">
+                                                Medium
+                                              </SelectItem>
+                                              <SelectItem value="High" className="bg-orange-50 text-orange-700 hover:bg-orange-100 w-full">
+                                                High
+                                              </SelectItem>
+                                              <SelectItem value="Critical" className="bg-red-50 text-red-700 hover:bg-red-100 w-full">
+                                                Critical
+                                              </SelectItem>
                                             </SelectContent>
                                           </Select>
                                         </td>

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { storage, Ticket, Department } from "@/lib/storage";
-import { formatDate, getPriorityColor, getStatusColor, isOverdue, getDaysUntilDue } from "@/lib/utils/date-calculator";
+import { formatDate, isOverdue, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { Plus, Search, Filter, Edit, Eye, Calendar, AlertTriangle, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -242,8 +242,6 @@ export default function TicketsPage() {
                     {filteredTickets.map((ticket) => {
                       const overdue = isOverdue(ticket.dueDate);
                       const daysLeft = getDaysUntilDue(ticket.dueDate);
-                      const priorityColor = getPriorityColor(ticket.priority);
-                      const statusColor = getStatusColor(ticket.status);
 
                       return (
                         <TableRow key={ticket.id}>
@@ -276,12 +274,44 @@ export default function TicketsPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={statusColor}>
+                            <Badge
+                              variant="outline"
+                              className={`${(() => {
+                                switch (ticket.status) {
+                                  case "Open":
+                                    return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+                                  case "In Progress":
+                                    return "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100";
+                                  case "Resolved":
+                                    return "bg-green-50 text-green-700 border-green-200 hover:bg-green-100";
+                                  case "Overdue":
+                                    return "bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
+                                  default:
+                                    return "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
+                                }
+                              })()}`}
+                            >
                               {ticket.status}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={priorityColor}>
+                            <Badge
+                              variant="outline"
+                              className={`${(() => {
+                                switch (ticket.priority) {
+                                  case "Low":
+                                    return "bg-green-50 text-green-700 border-green-200 hover:bg-green-100";
+                                  case "Medium":
+                                    return "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100";
+                                  case "High":
+                                    return "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100";
+                                  case "Critical":
+                                    return "bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
+                                  default:
+                                    return "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
+                                }
+                              })()}`}
+                            >
                               {ticket.priority}
                             </Badge>
                           </TableCell>
@@ -290,8 +320,17 @@ export default function TicketsPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <div className={`w-2 h-2 rounded-full ${daysLeft < 0 ? "bg-red-500" : daysLeft <= 1 ? "bg-orange-500" : daysLeft <= 3 ? "bg-yellow-500" : "bg-green-500"}`}></div>
-                              <span className={`text-sm font-medium ${daysLeft < 0 ? "text-red-600" : daysLeft <= 1 ? "text-orange-600" : daysLeft <= 3 ? "text-yellow-600" : "text-green-600"}`}>{daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}</span>
+                              {ticket.status === "Resolved" ? (
+                                <>
+                                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                  <span className="text-sm font-medium text-green-600">Resolved</span>
+                                </>
+                              ) : (
+                                <>
+                                  <div className={`w-2 h-2 rounded-full ${daysLeft < 0 ? "bg-red-500" : daysLeft <= 1 ? "bg-orange-500" : daysLeft <= 3 ? "bg-yellow-500" : "bg-green-500"}`}></div>
+                                  <span className={`text-sm font-medium ${daysLeft < 0 ? "text-red-600" : daysLeft <= 1 ? "text-orange-600" : daysLeft <= 3 ? "text-yellow-600" : "text-green-600"}`}>{daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}</span>
+                                </>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>

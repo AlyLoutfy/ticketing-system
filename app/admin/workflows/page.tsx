@@ -418,6 +418,8 @@ function WorkflowsPageContent() {
             </CardContent>
           </Card>
         </div>
+
+        <ClientToastContainer />
       </div>
     );
   }

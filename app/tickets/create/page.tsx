@@ -128,6 +128,9 @@ export default function CreateTicketPage() {
         status: "Open" as const,
         priority: ticketType.priority,
         sla: { value: ticketType.defaultWD, unit: "days" as const },
+        currentDepartment: selectedDepartment?.name,
+        currentWorkflowStep: 1,
+        isFullyResolved: false,
         createdAt: now,
         dueDate:
           estimatedDueDate ||
@@ -169,24 +172,25 @@ export default function CreateTicketPage() {
                 Back to Dashboard
               </Button>
             </Link>
-            <div className="text-center">
+            <div className="flex-1 text-center">
               <h1 className="text-3xl font-bold text-gray-900">Create New Ticket</h1>
             </div>
+            <div className="w-32"></div> {/* Spacer to balance the layout */}
           </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Main Form */}
           <div className="xl:col-span-2">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg p-4">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg p-4 m-0">
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <Ticket className="w-6 h-6" />
                   Ticket Information
                 </CardTitle>
                 <CardDescription className="text-blue-100">Provide the necessary details for the ticket</CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-6 pt-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Step 1: Department & Sub-Category Selection */}
                   <div className="space-y-4">
@@ -350,15 +354,15 @@ export default function CreateTicketPage() {
           {/* Preview Sidebar */}
           <div className="xl:col-span-1">
             <div className="sticky top-6">
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg p-4">
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
+                <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg p-4 m-0">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
                     Ticket Preview
                   </CardTitle>
                   <CardDescription className="text-green-100">Review your ticket details</CardDescription>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-6 pt-6 space-y-4">
                   {/* Department & Type */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">

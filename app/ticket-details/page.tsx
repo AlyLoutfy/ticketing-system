@@ -1,0 +1,341 @@
+"use client";
+
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkflowTimeline } from "@/components/ui/workflow-timeline";
+import { storage, Ticket, WorkflowResolution } from "@/lib/storage";
+import { formatDate, getPriorityColor, getStatusColor, getDaysUntilDue, isOverdue } from "@/lib/utils/date-calculator";
+import { SLADisplay } from "@/components/ui/sla-display";
+import { ArrowLeft, Calendar, Clock, User, Building, FileText, AlertTriangle, CheckCircle, Edit, Trash2, Home } from "lucide-react";
+import Link from "next/link";
+
+function TicketDetailsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const ticketId = searchParams.get("id");
+
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [workflowResolutions, setWorkflowResolutions] = useState<WorkflowResolution[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadTicketDetails = async () => {
+      if (!ticketId) {
+        setError("No ticket ID provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        await storage.init();
+
+        // Load ticket
+        const ticketData = await storage.getTicket(ticketId);
+        if (!ticketData) {
+          setError("Ticket not found");
+          return;
+        }
+        setTicket(ticketData);
+
+        // Load workflow resolutions
+        const resolutions = await storage.getWorkflowResolutions(ticketId);
+        setWorkflowResolutions(resolutions);
+      } catch (err) {
+        console.error("Error loading ticket details:", err);
+        setError("Failed to load ticket details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTicketDetails();
+  }, [ticketId]);
+
+  const handleDelete = async () => {
+    if (!ticket) return;
+
+    if (confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
+      try {
+        await storage.deleteTicket(ticket.id);
+        router.push("/");
+      } catch (err) {
+        console.error("Error deleting ticket:", err);
+        alert("Failed to delete ticket. Please try again.");
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading ticket details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !ticket) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Ticket Not Found</h1>
+          <p className="text-gray-600 mb-6">{error || "The requested ticket could not be found."}</p>
+          <Button onClick={() => router.push("/")} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Tickets
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const getTicketNumber = (id: string) => {
+    const match = id.match(/\d+/);
+    return match ? match[0] : id;
+  };
+
+  // Define workflow departments based on ticket type and department
+  const getWorkflowDepartments = (ticket: Ticket): string[] => {
+    // For now, create a simple 3-step workflow
+    // In a real system, this would be configurable based on ticket type
+    const baseDepartment = ticket.department;
+
+    // Common workflow patterns based on department
+    const workflowPatterns: Record<string, string[]> = {
+      "IT Support": [baseDepartment, "Technical Review", "Final Approval"],
+      HR: [baseDepartment, "Management Review", "Final Approval"],
+      Finance: [baseDepartment, "Compliance Review", "Final Approval"],
+      Legal: [baseDepartment, "Senior Review", "Final Approval"],
+      Operations: [baseDepartment, "Quality Review", "Final Approval"],
+    };
+
+    // Return specific pattern if available, otherwise use generic pattern
+    return workflowPatterns[baseDepartment] || [baseDepartment, "Review Department", "Final Department"];
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Tickets
+              </Button>
+              <div className="h-6 w-px bg-gray-300" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{ticket.ticketType}</h1>
+                <p className="text-sm text-gray-600">
+                  Ticket {getTicketNumber(ticket.id)} • Created {formatDate(ticket.createdAt)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link href={`/ticket?id=${ticket.id}&mode=edit`}>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Edit className="w-4 h-4" />
+                  Edit Ticket
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={handleDelete} className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50">
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Ticket Details */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Status Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5" />
+                  Status & Priority
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Status</span>
+                  <Badge className={getStatusColor(ticket.status)}>{ticket.status}</Badge>
+                </div>
+                {ticket.status === "Overdue" && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                    <span className="text-sm text-red-700">This ticket is overdue</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Priority</span>
+                  <Badge className={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Days Left</span>
+                  <span className={`text-sm font-medium ${getDaysUntilDue(ticket.dueDate) < 0 ? "text-red-600" : getDaysUntilDue(ticket.dueDate) <= 1 ? "text-orange-600" : "text-green-600"}`}>
+                    {(() => {
+                      const daysLeft = getDaysUntilDue(ticket.dueDate);
+                      if (daysLeft < 0) {
+                        return `${Math.abs(daysLeft)} days overdue`;
+                      } else if (daysLeft === 0) {
+                        return "Due today";
+                      } else {
+                        return `${daysLeft} days remaining`;
+                      }
+                    })()}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ticket Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Ticket Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Department</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Building className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">{ticket.department}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Ticket Type</span>
+                  <p className="text-sm text-gray-900 mt-1">{ticket.ticketType}</p>
+                </div>
+                {ticket.subCategory && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Sub-Category</span>
+                    <p className="text-sm text-gray-900 mt-1">{ticket.subCategory}</p>
+                  </div>
+                )}
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Client Name</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">{ticket.clientName}</span>
+                  </div>
+                </div>
+                {ticket.unitId && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Unit ID</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Home className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-900">{ticket.unitId}</span>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Ticket Owner</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">{ticket.ticketOwner}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* SLA Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  SLA Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Total SLA</span>
+                  <div className="mt-1">
+                    <SLADisplay sla={ticket.sla} />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Created</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">{formatDate(ticket.createdAt)}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Due Date</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className={`text-sm ${isOverdue(ticket.dueDate) ? "text-red-600 font-medium" : "text-gray-900"}`}>{formatDate(ticket.dueDate)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Description */}
+            {ticket.description && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{ticket.description}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Workflow Timeline */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardContent className="p-6">
+                <WorkflowTimeline
+                  resolutions={workflowResolutions}
+                  currentStep={ticket.currentWorkflowStep || 1}
+                  totalSteps={3} // TODO: Get from actual workflow
+                  currentDepartment={ticket.currentDepartment}
+                  ticketCreatedAt={ticket.createdAt}
+                  ticketStatus={ticket.status}
+                  workflowDepartments={getWorkflowDepartments(ticket)}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function TicketDetailsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading ticket details...</p>
+          </div>
+        </div>
+      }
+    >
+      <TicketDetailsContent />
+    </Suspense>
+  );
+}

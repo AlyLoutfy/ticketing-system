@@ -40,6 +40,8 @@ export interface Ticket {
   ticketOwner: string;
   currentWorkflowStep?: number;
   workflowId?: string;
+  currentDepartment?: string; // Which department is currently handling the ticket
+  isFullyResolved?: boolean; // True only when final department marks as resolved
   createdAt: Date;
   updatedAt: Date;
   dueDate: Date;
@@ -73,9 +75,30 @@ export interface WorkflowResolution {
   toDepartment?: string;
   resolvedBy: string;
   resolutionText: string;
-  attachments?: string[];
+  attachments?: FileAttachment[];
   resolvedAt: Date;
   isFinalResolution: boolean;
+  isRevert?: boolean; // Mark revert actions
+  // SLA tracking
+  expectedSLA?: {
+    value: number;
+    unit: "hours" | "days" | "weeks";
+  };
+  actualTimeTaken?: {
+    value: number;
+    unit: "hours" | "days" | "weeks";
+  };
+  slaStatus?: "met" | "missed" | "exceeded";
+  startedAt?: Date; // When the department started working on this step
+}
+
+export interface FileAttachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  data: string; // Base64 encoded file data for MVP
+  uploadedAt: Date;
 }
 
 export interface TicketHistory {
@@ -961,11 +984,133 @@ class IndexedDBStorage {
     });
   }
 
+  // Resolve ticket for current department (workflow step)
+  async resolveTicketForDepartment(ticketId: string, departmentName: string, resolutionText: string, attachments: FileAttachment[] = []): Promise<{ resolution: WorkflowResolution; updatedTicket: Ticket }> {
+    const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+
+    // Get the ticket
+    const ticket = await this.getTicket(ticketId);
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+
+    // For now, we'll treat all resolutions as final until proper workflow is implemented
+    // In a real system, this would check the workflow to determine next department
+    const isFinalStep = true; // TODO: Implement proper workflow logic
+    const nextDepartment = isFinalStep ? undefined : "Next Department"; // TODO: Get from workflow
+
+    // Calculate SLA information
+    const now = new Date();
+    const ticketCreatedAt = ticket.createdAt;
+    const timeSinceCreation = now.getTime() - ticketCreatedAt.getTime();
+    const daysSinceCreation = timeSinceCreation / (1000 * 60 * 60 * 24);
+
+    // Get expected SLA from ticket
+    const expectedSLA = ticket.sla;
+    const expectedDays = expectedSLA ? (expectedSLA.unit === "days" ? expectedSLA.value : expectedSLA.unit === "hours" ? expectedSLA.value / 24 : expectedSLA.value * 7) : 7; // Default to 7 days if no SLA
+
+    // Calculate SLA status - for now, we'll use a simpler approach
+    // In a real system, this would track actual work time per department
+    let slaStatus: "met" | "missed" | "exceeded" = "met";
+
+    // For the first step, compare against total SLA
+    if (ticket.currentWorkflowStep === 1) {
+      if (daysSinceCreation > expectedDays) {
+        slaStatus = "missed";
+      } else if (daysSinceCreation < expectedDays * 0.3) {
+        slaStatus = "exceeded";
+      }
+    } else {
+      // For subsequent steps, assume they met SLA unless we have better tracking
+      slaStatus = "met";
+    }
+
+    // Create workflow resolution
+    const resolution: Omit<WorkflowResolution, "id" | "resolvedAt"> = {
+      ticketId,
+      stepNumber: ticket.currentWorkflowStep || 1,
+      fromDepartment: departmentName,
+      toDepartment: nextDepartment,
+      resolvedBy: "Current User", // TODO: Get actual user
+      resolutionText,
+      attachments,
+      isFinalResolution: isFinalStep,
+      expectedSLA: expectedSLA
+        ? {
+            value: expectedSLA.value,
+            unit: expectedSLA.unit,
+          }
+        : undefined,
+      actualTimeTaken: {
+        value: Math.round(daysSinceCreation * 100) / 100,
+        unit: "days",
+      },
+      slaStatus,
+      startedAt: ticketCreatedAt, // For now, assume work started when ticket was created
+    };
+
+    const newResolution = await this.createWorkflowResolution(resolution);
+
+    // Update ticket status
+    const ticketUpdates: Partial<Ticket> = {
+      currentDepartment: nextDepartment,
+      currentWorkflowStep: isFinalStep ? undefined : (ticket.currentWorkflowStep || 1) + 1,
+      isFullyResolved: isFinalStep,
+      status: isFinalStep ? "Resolved" : "In Progress",
+      updatedAt: new Date(),
+    };
+
+    const updatedTicket = await this.updateTicket(ticketId, ticketUpdates);
+
+    return { resolution: newResolution, updatedTicket };
+  }
+
+  // Revert ticket to a previous department (admin action)
+  async revertTicketToDepartment(ticketId: string, targetDepartment: string, reason: string, revertedBy: string = "Admin"): Promise<{ resolution: WorkflowResolution; updatedTicket: Ticket }> {
+    const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+
+    // Get the ticket
+    const ticket = await this.getTicket(ticketId);
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+
+    // Create revert resolution (special type of workflow resolution)
+    const resolution: Omit<WorkflowResolution, "id" | "resolvedAt"> = {
+      ticketId,
+      stepNumber: (ticket.currentWorkflowStep || 1) - 1, // Decrement step
+      fromDepartment: ticket.currentDepartment || "Unknown",
+      toDepartment: targetDepartment,
+      resolvedBy: revertedBy,
+      resolutionText: `REVERT: ${reason}`,
+      attachments: [],
+      isFinalResolution: false,
+      isRevert: true, // Mark as revert action
+    };
+
+    const newResolution = await this.createWorkflowResolution(resolution);
+
+    // Update ticket to revert to previous department
+    const ticketUpdates: Partial<Ticket> = {
+      currentDepartment: targetDepartment,
+      currentWorkflowStep: Math.max(1, (ticket.currentWorkflowStep || 1) - 1),
+      isFullyResolved: false,
+      status: "In Progress", // Reset to in progress
+      updatedAt: new Date(),
+    };
+
+    const updatedTicket = await this.updateTicket(ticketId, ticketUpdates);
+
+    return { resolution: newResolution, updatedTicket };
+  }
+
+  // Get workflow resolutions for a ticket
   async getWorkflowResolutions(ticketId: string): Promise<WorkflowResolution[]> {
     const db = this.ensureDB();
     if (!db) throw new Error("Database not available");
-    if (!db) throw new Error("Database not available");
-    if (!db) throw new Error("Database not available");
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["workflowResolutions"], "readonly");
       const store = transaction.objectStore("workflowResolutions");
@@ -973,11 +1118,14 @@ class IndexedDBStorage {
       const request = index.getAll(ticketId);
 
       request.onsuccess = () => {
-        const resolutions = request.result;
-        // Sort by resolution date (newest first)
-        resolutions.sort((a: WorkflowResolution, b: WorkflowResolution) => b.resolvedAt.getTime() - a.resolvedAt.getTime());
-        resolve(resolutions);
+        const resolutions = request.result.map((resolution: WorkflowResolution & { resolvedAt: string }) => ({
+          ...resolution,
+          resolvedAt: new Date(resolution.resolvedAt),
+          attachments: resolution.attachments || [],
+        }));
+        resolve(resolutions.sort((a, b) => a.stepNumber - b.stepNumber));
       };
+
       request.onerror = () => reject(request.error!);
     });
   }

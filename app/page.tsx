@@ -10,9 +10,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { storage, Ticket, Department } from "@/lib/storage";
-import { formatDate, isOverdue, getPriorityColor, getStatusColor, getDaysUntilDue } from "@/lib/utils/date-calculator";
+import { storage, Ticket, Department, WorkflowResolution } from "@/lib/storage";
+import { formatDate, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
+import { WorkflowProgressBadge } from "@/components/ui/workflow-progress-badge";
+import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
 import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Trash2, Check, Eye, Edit, Filter } from "lucide-react";
 import Link from "next/link";
 
@@ -26,6 +28,7 @@ const isTextTruncated = (text: string, maxWidth: number) => {
 export default function Home() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [workflowResolutions, setWorkflowResolutions] = useState<Map<string, WorkflowResolution[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,37 +67,37 @@ export default function Home() {
 
   // Calendar state for push due date
 
-  // Ticket modal state
-  const [showTicketModal, setShowTicketModal] = useState(false);
-  const [selectedTicketForModal, setSelectedTicketForModal] = useState<Ticket | null>(null);
-
   const loadData = async () => {
     try {
-      console.log("Starting data load...");
       await storage.init();
-      console.log("Storage initialized");
 
       // Check if we need to seed data
       const existingDepartments = await storage.getDepartments();
-      console.log("Existing departments:", existingDepartments.length);
       if (existingDepartments.length === 0) {
-        console.log("Seeding departments...");
         const departmentsData = await import("@/data/departments.json");
         await storage.seedDepartments(departmentsData.default);
         await storage.seedSampleTickets();
-        console.log("Departments seeded");
       }
 
-      console.log("Loading tickets and departments...");
       const [ticketsData, departmentsData] = await Promise.all([storage.getTickets(), storage.getDepartments()]);
-      console.log("Loaded tickets:", ticketsData.length, "departments:", departmentsData.length);
       setTickets(ticketsData);
       setDepartments(departmentsData);
-      console.log("Data loaded successfully");
+
+      // Load workflow resolutions for all tickets
+      const resolutionsMap = new Map();
+      for (const ticket of ticketsData) {
+        try {
+          const resolutions = await storage.getWorkflowResolutions(ticket.id);
+          resolutionsMap.set(ticket.id, resolutions);
+        } catch (error) {
+          console.error(`Error loading resolutions for ticket ${ticket.id}:`, error);
+          resolutionsMap.set(ticket.id, []);
+        }
+      }
+      setWorkflowResolutions(resolutionsMap);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
-      console.log("Setting loading to false");
       setLoading(false);
     }
   };
@@ -149,9 +152,7 @@ export default function Home() {
   }, [tickets, selectedDepartment, filters, mounted]);
 
   useEffect(() => {
-    console.log("useEffect: setting mounted to true");
     setMounted(true);
-    console.log("useEffect: calling loadData");
     loadData();
   }, []);
 
@@ -185,8 +186,10 @@ export default function Home() {
       setTickets(updatedTickets);
       setShowConfirmation(false);
       setConfirmationAction(null);
+      showToast("Ticket deleted successfully!", "success");
     } catch (error) {
       console.error("Error deleting ticket:", error);
+      showToast("Failed to delete ticket", "error");
     }
   };
 
@@ -206,8 +209,17 @@ export default function Home() {
       setTickets(updatedTickets);
       setSelectedTickets(new Set());
       setShowBulkActions(false);
+
+      // Show success notification
+      const count = selectedTickets.size;
+      if (action === "delete") {
+        showToast(`${count} ticket${count > 1 ? "s" : ""} deleted successfully!`, "success");
+      } else {
+        showToast(`${count} ticket${count > 1 ? "s" : ""} marked as resolved!`, "success");
+      }
     } catch (error) {
       console.error("Error performing bulk action:", error);
+      showToast("Failed to perform bulk action", "error");
     }
   };
 
@@ -233,14 +245,10 @@ export default function Home() {
   };
 
   const handleTicketIdClick = (ticket: Ticket) => {
-    setSelectedTicketForModal(ticket);
-    setShowTicketModal(true);
+    window.location.href = `/ticket-details?id=${ticket.id}`;
   };
 
-  console.log("Render check - loading:", loading, "mounted:", mounted);
-
   if (loading || !mounted) {
-    console.log("Showing loading spinner");
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
@@ -390,7 +398,7 @@ export default function Home() {
           )}
 
           {/* Tickets Table */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden p-0">
             {/* Search and Filters Bar - Now part of the table area */}
             <div className="px-4 py-2 border-b bg-gray-50">
               <div className="flex items-center gap-2 flex-wrap">
@@ -402,10 +410,18 @@ export default function Home() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
+                    <SelectItem value="Low" className="bg-green-50 text-green-700 hover:bg-green-100 w-full">
+                      Low
+                    </SelectItem>
+                    <SelectItem value="Medium" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100 w-full">
+                      Medium
+                    </SelectItem>
+                    <SelectItem value="High" className="bg-orange-50 text-orange-700 hover:bg-orange-100 w-full">
+                      High
+                    </SelectItem>
+                    <SelectItem value="Critical" className="bg-red-50 text-red-700 hover:bg-red-100 w-full">
+                      Critical
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -563,6 +579,7 @@ export default function Home() {
                     <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                     <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SLA</th>
+                    <th className="w-24 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
                     <th className="w-24 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Left</th>
                     <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                     <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
@@ -614,16 +631,68 @@ export default function Home() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap">
-                          <Badge variant={getStatusColor(ticket.status)}>{ticket.status}</Badge>
+                          <Badge
+                            variant="outline"
+                            className={`${(() => {
+                              switch (ticket.status) {
+                                case "Open":
+                                  return "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100";
+                                case "In Progress":
+                                  return "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100";
+                                case "Resolved":
+                                  return "bg-green-50 text-green-700 border-green-200 hover:bg-green-100";
+                                case "Overdue":
+                                  return "bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
+                                default:
+                                  return "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
+                              }
+                            })()}`}
+                          >
+                            {ticket.status}
+                          </Badge>
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap">
-                          <Badge variant={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
+                          <Badge
+                            variant="outline"
+                            className={`${(() => {
+                              switch (ticket.priority) {
+                                case "Low":
+                                  return "bg-green-50 text-green-700 border-green-200 hover:bg-green-100";
+                                case "Medium":
+                                  return "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100";
+                                case "High":
+                                  return "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100";
+                                case "Critical":
+                                  return "bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
+                                default:
+                                  return "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
+                              }
+                            })()}`}
+                          >
+                            {ticket.priority}
+                          </Badge>
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
                           <SLADisplay sla={ticket.sla} />
                         </td>
+                        <td className="px-3 py-2 text-sm whitespace-nowrap">
+                          <WorkflowProgressBadge
+                            currentStep={ticket.currentWorkflowStep || 1}
+                            totalSteps={4} // Default to 4 steps, should be dynamic based on workflow
+                            resolutions={workflowResolutions.get(ticket.id) || []}
+                            currentDepartment={ticket.currentDepartment}
+                            isFullyResolved={ticket.isFullyResolved}
+                            status={ticket.status}
+                            ticketCreatedAt={ticket.createdAt}
+                          />
+                        </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap" suppressHydrationWarning>
                           {(() => {
+                            // If ticket is resolved, show "Resolved" instead of counting days
+                            if (ticket.status === "Resolved") {
+                              return <span className="text-green-600 font-medium">Resolved</span>;
+                            }
+
                             const daysLeft = getDaysUntilDue(ticket.dueDate);
                             if (daysLeft < 0) {
                               return <span className="text-red-600 font-medium">Overdue</span>;
@@ -646,12 +715,12 @@ export default function Home() {
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">
                           <div className="flex space-x-1">
-                            <Link href={`/ticket/${ticket.id}`}>
+                            <Link href={`/ticket-details?id=${ticket.id}`}>
                               <Button variant="ghost" size="sm" className="cursor-pointer">
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Link href={`/ticket/${ticket.id}/edit`}>
+                            <Link href={`/ticket?id=${ticket.id}&mode=edit`}>
                               <Button variant="ghost" size="sm" className="cursor-pointer">
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -711,145 +780,9 @@ export default function Home() {
           description={`Are you sure you want to ${confirmationAction?.type === "delete" ? "delete" : "update"} this ticket?`}
           variant="destructive"
         />
-
-        {/* Ticket Details Modal */}
-        {showTicketModal && selectedTicketForModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-gray-900">Ticket {getTicketNumber(selectedTicketForModal.id)}</h2>
-                    <Badge className={getStatusColor(selectedTicketForModal.status)}>{selectedTicketForModal.status}</Badge>
-                    {selectedTicketForModal.status === "Overdue" && (
-                      <Badge variant="destructive">
-                        <AlertTriangle className="w-3 h-3 mr-1" />
-                        Overdue
-                      </Badge>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setShowTicketModal(false)} className="text-gray-500 hover:text-gray-700 cursor-pointer">
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                {/* Ticket Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Department</label>
-                      <p className="text-sm text-gray-900">{selectedTicketForModal.department}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Ticket Type</label>
-                      <p className="text-sm text-gray-900">{selectedTicketForModal.ticketType}</p>
-                    </div>
-                    {selectedTicketForModal.subCategory && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Sub-Category</label>
-                        <p className="text-sm text-gray-900">{selectedTicketForModal.subCategory}</p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Client Name</label>
-                      <p className="text-sm text-gray-900">{selectedTicketForModal.clientName}</p>
-                    </div>
-                    {selectedTicketForModal.unitId && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Unit ID</label>
-                        <p className="text-sm text-gray-900">{selectedTicketForModal.unitId}</p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Ticket Owner</label>
-                      <p className="text-sm text-gray-900">{selectedTicketForModal.ticketOwner}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Priority</label>
-                      <Badge className={getPriorityColor(selectedTicketForModal.priority)}>{selectedTicketForModal.priority}</Badge>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">SLA</label>
-                      <p className="text-sm text-gray-900">
-                        <SLADisplay sla={selectedTicketForModal.sla} />
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Created</label>
-                      <p className="text-sm text-gray-900" suppressHydrationWarning>
-                        {formatDate(selectedTicketForModal.createdAt)}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Due Date</label>
-                      <p className={`text-sm ${isOverdue(selectedTicketForModal.dueDate) ? "text-red-600 font-medium" : "text-gray-900"}`} suppressHydrationWarning>
-                        {formatDate(selectedTicketForModal.dueDate)}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Days Left</label>
-                      <p className={`text-sm font-medium ${getDaysUntilDue(selectedTicketForModal.dueDate) < 0 ? "text-red-600" : getDaysUntilDue(selectedTicketForModal.dueDate) <= 1 ? "text-orange-600" : "text-green-600"}`}>
-                        {(() => {
-                          const daysLeft = getDaysUntilDue(selectedTicketForModal.dueDate);
-                          if (daysLeft < 0) {
-                            return `${Math.abs(daysLeft)} days overdue`;
-                          } else if (daysLeft === 0) {
-                            return "Due today";
-                          } else {
-                            return `${daysLeft} days remaining`;
-                          }
-                        })()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                {selectedTicketForModal.description && (
-                  <div className="mb-6">
-                    <label className="text-sm font-medium text-gray-600">Description</label>
-                    <div className="mt-2 p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedTicketForModal.description}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                  <Link href={`/ticket?id=${selectedTicketForModal.id}`}>
-                    <Button>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Full Details
-                    </Button>
-                  </Link>
-                  <Link href={`/ticket?id=${selectedTicketForModal.id}&mode=edit`}>
-                    <Button variant="outline" className="cursor-pointer">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Ticket
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowTicketModal(false);
-                      setConfirmationAction({ type: "delete", ticketId: selectedTicketForModal.id });
-                      setShowConfirmation(true);
-                    }}
-                    className="text-red-600 hover:text-red-700 cursor-pointer"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      <ClientToastContainer />
     </TooltipProvider>
   );
 }
