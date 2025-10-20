@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle, Circle, Clock } from "lucide-react";
-import { WorkflowResolution } from "@/lib/storage";
+import { WorkflowResolution, WorkflowStepStatus } from "@/lib/storage";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface WorkflowProgressBadgeProps {
@@ -12,11 +12,18 @@ interface WorkflowProgressBadgeProps {
   isFullyResolved?: boolean;
   status: string;
   ticketCreatedAt: Date;
+  workflowStatus?: WorkflowStepStatus[];
 }
 
-export function WorkflowProgressBadge({ totalSteps, resolutions, currentDepartment, isFullyResolved, status }: WorkflowProgressBadgeProps) {
-  const completedSteps = resolutions.length;
+export function WorkflowProgressBadge({ totalSteps, resolutions, currentDepartment, isFullyResolved, status, workflowStatus }: WorkflowProgressBadgeProps) {
+  // Use new workflow status if available, otherwise fall back to old system
+  const completedSteps = workflowStatus ? workflowStatus.filter((step) => step.status === "completed").length : resolutions.length;
+
+  const totalWorkflowSteps = workflowStatus?.length || totalSteps;
   const isCompleted = isFullyResolved || status === "Resolved";
+
+  // Get current step info from workflow status
+  const currentStepInfo = workflowStatus?.find((step) => step.status === "in_progress") || workflowStatus?.find((step) => step.status === "pending");
 
   // Determine badge color based on status
   const getBadgeColor = () => {
@@ -39,7 +46,7 @@ export function WorkflowProgressBadge({ totalSteps, resolutions, currentDepartme
         <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getBadgeColor()}`}>
           {getStatusIcon()}
           <span>
-            {completedSteps}/{totalSteps}
+            {completedSteps}/{totalWorkflowSteps}
           </span>
         </div>
       </TooltipTrigger>
@@ -51,11 +58,11 @@ export function WorkflowProgressBadge({ totalSteps, resolutions, currentDepartme
               <span className="font-medium">Status:</span> {status}
             </div>
             <div>
-              <span className="font-medium">Steps Completed:</span> {completedSteps} of {totalSteps}
+              <span className="font-medium">Steps Completed:</span> {completedSteps} of {totalWorkflowSteps}
             </div>
-            {currentDepartment && (
+            {currentStepInfo && (
               <div>
-                <span className="font-medium">Current Department:</span> {currentDepartment}
+                <span className="font-medium">Current Department:</span> {currentStepInfo.departmentName}
               </div>
             )}
           </div>

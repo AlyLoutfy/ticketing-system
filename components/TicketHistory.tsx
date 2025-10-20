@@ -45,6 +45,7 @@ export default function TicketHistoryComponent({ ticketId }: TicketHistoryProps)
     const fieldNames: { [key: string]: string } = {
       department: "Department",
       ticketType: "Ticket Type",
+      assignee: "Assignee",
       clientName: "Client Name",
       workingDays: "Working Days",
       priority: "Priority",

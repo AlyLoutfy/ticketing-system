@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { WorkflowTimeline } from "@/components/ui/workflow-timeline";
-import { storage, Ticket, WorkflowResolution } from "@/lib/storage";
+import { WorkflowProgress } from "@/components/WorkflowProgress";
+import { storage, Ticket, WorkflowResolution, Workflow } from "@/lib/storage";
 import { formatDate, getPriorityColor, getStatusColor, getDaysUntilDue, isOverdue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
-import { ArrowLeft, Calendar, Clock, User, Building, FileText, AlertTriangle, CheckCircle, Edit, X, Home } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Building, FileText, AlertTriangle, CheckCircle, Edit, X, Home, Ticket as TicketIcon, Workflow as WorkflowIcon } from "lucide-react";
 import Link from "next/link";
 
 function TicketDetailsContent() {
@@ -19,8 +19,34 @@ function TicketDetailsContent() {
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [workflowResolutions, setWorkflowResolutions] = useState<WorkflowResolution[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const loadWorkflowResolutions = useCallback(async () => {
+    if (!ticketId) return;
+    try {
+      const resolutions = await storage.getWorkflowResolutions(ticketId);
+      setWorkflowResolutions(resolutions);
+    } catch (err) {
+      console.error("Error loading workflow resolutions:", err);
+    }
+  }, [ticketId]);
+
+  const getAssignedWorkflow = (workflowId?: string): Workflow | null => {
+    if (workflowId) {
+      const found = workflows.find((w) => w.id === workflowId);
+      if (found) return found;
+    }
+    // fallback to default workflow
+    const def = workflows.find((w) => w.isDefault);
+    return def || null;
+  };
+
+  const getWorkflowName = (workflowId?: string) => {
+    const wf = getAssignedWorkflow(workflowId);
+    return wf ? wf.name : "Unknown";
+  };
 
   useEffect(() => {
     const loadTicketDetails = async () => {
@@ -43,8 +69,11 @@ function TicketDetailsContent() {
         setTicket(ticketData);
 
         // Load workflow resolutions
-        const resolutions = await storage.getWorkflowResolutions(ticketId);
-        setWorkflowResolutions(resolutions);
+        await loadWorkflowResolutions();
+
+        // Load workflows
+        const workflowsData = await storage.getWorkflows();
+        setWorkflows(workflowsData);
       } catch (err) {
         console.error("Error loading ticket details:", err);
         setError("Failed to load ticket details");
@@ -54,7 +83,7 @@ function TicketDetailsContent() {
     };
 
     loadTicketDetails();
-  }, [ticketId]);
+  }, [ticketId, loadWorkflowResolutions]);
 
   const handleClose = async () => {
     if (!ticket) return;
@@ -99,7 +128,9 @@ function TicketDetailsContent() {
 
   const getTicketNumber = (id: string) => {
     const match = id.match(/\d+/);
-    return match ? match[0] : id;
+    if (!match) return id;
+    const digits = match[0];
+    return digits.length > 4 ? digits.slice(-4) : digits;
   };
 
   // Define workflow departments based on ticket type and department
@@ -134,7 +165,10 @@ function TicketDetailsContent() {
               </Button>
               <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{ticket.ticketType}</h1>
+                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <TicketIcon className="w-6 h-6 text-blue-600" />
+                  {ticket.ticketType}
+                </h1>
                 <p className="text-sm text-gray-600">
                   Ticket {getTicketNumber(ticket.id)} • Created {formatDate(ticket.createdAt)}
                 </p>
@@ -220,7 +254,21 @@ function TicketDetailsContent() {
                 </div>
                 <div>
                   <span className="text-sm font-medium text-gray-600">Ticket Type</span>
-                  <p className="text-sm text-gray-900 mt-1">{ticket.ticketType}</p>
+                  <p className="text-sm text-gray-900 mt-1 flex items-center gap-2">
+                    <TicketIcon className="w-4 h-4 text-blue-600" />
+                    {ticket.ticketType}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Assigned Workflow</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <WorkflowIcon className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm text-gray-900">{getWorkflowName(ticket.workflowId)}</span>
+                    {(() => {
+                      const wf = getAssignedWorkflow(ticket.workflowId);
+                      return wf?.isDefault ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">Default</span> : null;
+                    })()}
+                  </div>
                 </div>
                 {ticket.subCategory && (
                   <div>
@@ -249,6 +297,13 @@ function TicketDetailsContent() {
                   <div className="flex items-center gap-2 mt-1">
                     <User className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-gray-900">{ticket.ticketOwner}</span>
+                  </div>
+                  <div className="mt-3">
+                    <span className="text-sm font-medium text-gray-600">Current Assignee</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <User className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-900">{ticket.assignee || "—"}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -301,21 +356,17 @@ function TicketDetailsContent() {
             )}
           </div>
 
-          {/* Right Column - Workflow Timeline */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent className="p-6">
-                <WorkflowTimeline
-                  resolutions={workflowResolutions}
-                  currentStep={ticket.currentWorkflowStep || 1}
-                  totalSteps={3} // TODO: Get from actual workflow
-                  currentDepartment={ticket.currentDepartment}
-                  ticketCreatedAt={ticket.createdAt}
-                  ticketStatus={ticket.status}
-                  workflowDepartments={getWorkflowDepartments(ticket)}
-                />
-              </CardContent>
-            </Card>
+          {/* Right Column - Workflow (merged timeline + progress) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Workflow Progress */}
+            <WorkflowProgress
+              ticket={ticket}
+              onTicketUpdate={(updatedTicket) => {
+                setTicket(updatedTicket);
+                // Refresh workflow resolutions
+                loadWorkflowResolutions();
+              }}
+            />
           </div>
         </div>
       </div>

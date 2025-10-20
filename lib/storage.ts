@@ -22,6 +22,25 @@ export interface TicketType {
   updatedAt: Date;
 }
 
+export interface DepartmentAction {
+  id: string;
+  actionType: "in_progress" | "completed";
+  notes: string;
+  timestamp: Date;
+  isComplete: boolean; // Whether this action marks the department step as complete
+  performedBy?: string; // who took the action (current assignee at that time)
+  newAssignee?: string; // if reassigned, the new assignee name
+}
+
+export interface WorkflowStepStatus {
+  stepNumber: number;
+  departmentId: string;
+  departmentName: string;
+  status: "pending" | "in_progress" | "completed";
+  completedAt?: Date;
+  actions: DepartmentAction[]; // Multiple actions per department step
+}
+
 export interface Ticket {
   id: string;
   department: string;
@@ -38,10 +57,12 @@ export interface Ticket {
   status: "Open" | "In Progress" | "Resolved" | "Rejected" | "Overdue" | "Closed";
   description?: string;
   ticketOwner: string;
+  assignee?: string; // current person actively handling the ticket
   currentWorkflowStep?: number;
   workflowId?: string;
   currentDepartment?: string; // Which department is currently handling the ticket
   isFullyResolved?: boolean; // True only when final department marks as resolved
+  workflowStatus?: WorkflowStepStatus[]; // Track status of each workflow step
   createdAt: Date;
   updatedAt: Date;
   dueDate: Date;
@@ -101,6 +122,12 @@ export interface FileAttachment {
   uploadedAt: Date;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  department: string; // department name
+}
+
 export interface TicketHistory {
   id: string;
   ticketId: string;
@@ -117,8 +144,7 @@ export interface TicketHistory {
 class IndexedDBStorage {
   private db: IDBDatabase | null = null;
   private dbName = "TicketingSystem";
-  private version = 6;
-  private idCounter = 0;
+  private version = 7;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
   private static instance: IndexedDBStorage;
@@ -200,6 +226,17 @@ class IndexedDBStorage {
           historyStore.createIndex("ticketId", "ticketId");
           historyStore.createIndex("changedAt", "changedAt");
 
+          // Ensure old stores removed on upgrade
+          if (db.objectStoreNames.contains("workflows")) {
+            db.deleteObjectStore("workflows");
+          }
+          if (db.objectStoreNames.contains("workflowResolutions")) {
+            db.deleteObjectStore("workflowResolutions");
+          }
+          if (db.objectStoreNames.contains("users")) {
+            db.deleteObjectStore("users");
+          }
+
           // Create workflows store
           const workflowStore = db.createObjectStore("workflows", { keyPath: "id" });
           workflowStore.createIndex("name", "name");
@@ -207,6 +244,7 @@ class IndexedDBStorage {
 
           // Create workflow resolutions store
           const resolutionStore = db.createObjectStore("workflowResolutions", { keyPath: "id" });
+          const usersStore = db.createObjectStore("users", { keyPath: "id" });
           resolutionStore.createIndex("ticketId", "ticketId");
           resolutionStore.createIndex("resolvedAt", "resolvedAt");
 
@@ -424,12 +462,18 @@ class IndexedDBStorage {
     const now = new Date();
     const dueDate = this.calculateDueDate(now, ticket.workingDays);
 
+    // Initialize workflow status
+    const workflowStatus = await this.initializeWorkflowStatus(ticket as Ticket, ticket.workflowId);
+
     const newTicket: Ticket = {
       ...ticket,
       id: this.generateId(),
       createdAt: now,
       updatedAt: now,
       dueDate,
+      workflowStatus,
+      currentWorkflowStep: 1,
+      currentDepartment: workflowStatus[0]?.departmentName || ticket.department,
     };
 
     return new Promise((resolve, reject) => {
@@ -484,6 +528,12 @@ class IndexedDBStorage {
           });
         }
 
+        // Migrate workflow status for all tickets
+        tickets = tickets.map((ticket) => ({
+          ...ticket,
+          workflowStatus: ticket.workflowStatus ? this.migrateWorkflowStatus(ticket.workflowStatus) : undefined,
+        }));
+
         // Apply filters
         if (filters) {
           if (filters.department) {
@@ -517,7 +567,20 @@ class IndexedDBStorage {
       const store = transaction.objectStore("tickets");
       const request = store.get(id);
 
-      request.onsuccess = () => resolve(request.result || null);
+      request.onsuccess = () => {
+        const ticket = request.result;
+        if (!ticket) {
+          resolve(null);
+          return;
+        }
+
+        // Migrate workflow status if needed
+        if (ticket.workflowStatus) {
+          ticket.workflowStatus = this.migrateWorkflowStatus(ticket.workflowStatus);
+        }
+
+        resolve(ticket);
+      };
       request.onerror = () => reject(request.error!);
     });
   }
@@ -656,9 +719,10 @@ class IndexedDBStorage {
 
   // Utility methods
   private generateId(): string {
-    // Use a simple counter for server-side consistency
-    this.idCounter += 1;
-    return `id_${this.idCounter}`;
+    // Use timestamp + random number for better uniqueness
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    return `id_${timestamp}_${random}`;
   }
 
   // Singleton pattern to ensure consistent state
@@ -724,6 +788,104 @@ class IndexedDBStorage {
     }
 
     await this.seedAllSampleTickets();
+  }
+
+  // Seed default workflow if none exists
+  async seedDefaultWorkflow(): Promise<void> {
+    const existingWorkflows = await this.getWorkflows();
+    if (existingWorkflows.length > 0) {
+      return;
+    }
+
+    const departments = await this.getDepartments();
+    if (departments.length === 0) {
+      return;
+    }
+
+    // Create a default 4-step workflow
+    const defaultWorkflowSteps = [
+      {
+        id: this.generateId(),
+        departmentId: departments[0]?.id || "dept1",
+        departmentName: departments[0]?.name || "CM (Community Management)",
+        stepNumber: 1,
+        isRequired: true,
+        estimatedDays: 2,
+        slaUnit: "days" as const,
+      },
+      {
+        id: this.generateId(),
+        departmentId: departments[1]?.id || "dept2",
+        departmentName: departments[1]?.name || "Collection",
+        stepNumber: 2,
+        isRequired: true,
+        estimatedDays: 3,
+        slaUnit: "days" as const,
+      },
+      {
+        id: this.generateId(),
+        departmentId: departments[2]?.id || "dept3",
+        departmentName: departments[2]?.name || "HO (Handover)",
+        stepNumber: 3,
+        isRequired: true,
+        estimatedDays: 1,
+        slaUnit: "days" as const,
+      },
+      {
+        id: this.generateId(),
+        departmentId: departments[3]?.id || "dept4",
+        departmentName: departments[3]?.name || "Sports",
+        stepNumber: 4,
+        isRequired: true,
+        estimatedDays: 1,
+        slaUnit: "days" as const,
+      },
+    ];
+
+    const workflow = await this.createWorkflow({
+      name: "Default Workflow",
+      description: "Default workflow for all tickets",
+      steps: defaultWorkflowSteps,
+      isDefault: true,
+    });
+
+    // Migrate existing tickets to use the default workflow
+    await this.migrateExistingTicketsToDefaultWorkflow(workflow.id);
+  }
+
+  // Migrate existing tickets to use the default workflow
+  async migrateExistingTicketsToDefaultWorkflow(defaultWorkflowId: string): Promise<void> {
+    const tickets = await this.getTickets();
+    const defaultWorkflow = await this.getWorkflow(defaultWorkflowId);
+
+    if (!defaultWorkflow) {
+      return;
+    }
+
+    for (const ticket of tickets) {
+      // Only migrate tickets that don't have a workflowId and have single-step workflowStatus
+      if (!ticket.workflowId && ticket.workflowStatus && ticket.workflowStatus.length === 1) {
+        // Create new workflow status from default workflow
+        const newWorkflowStatus = defaultWorkflow.steps.map((step, index) => ({
+          stepNumber: index + 1,
+          departmentId: step.departmentId,
+          departmentName: step.departmentName,
+          status: (index === 0 ? "in_progress" : "pending") as "in_progress" | "completed" | "pending",
+          actions: index === 0 ? ticket.workflowStatus?.[0]?.actions || [] : [],
+        }));
+
+        // Update the ticket
+        const updatedTicket = {
+          ...ticket,
+          workflowId: defaultWorkflowId,
+          workflowStatus: newWorkflowStatus,
+          currentWorkflowStep: 1,
+          currentDepartment: defaultWorkflow.steps[0].departmentName,
+        };
+
+        await this.updateTicket(ticket.id, updatedTicket);
+      }
+    }
   }
 
   // Force reseed all sample tickets (clears existing and creates new ones)
@@ -1853,6 +2015,295 @@ class IndexedDBStorage {
 
       request.onerror = () => reject(request.error!);
     });
+  }
+
+  // Initialize workflow status for a new ticket
+  async initializeWorkflowStatus(ticket: Ticket, workflowId?: string): Promise<WorkflowStepStatus[]> {
+    if (!workflowId) {
+      // If no workflow, use the default workflow instead of creating a single-step workflow
+      const defaultWorkflow = await this.getDefaultWorkflow();
+      if (defaultWorkflow) {
+        return defaultWorkflow.steps.map((step, index) => ({
+          stepNumber: index + 1,
+          departmentId: step.departmentId,
+          departmentName: step.departmentName,
+          status: index === 0 ? "in_progress" : "pending",
+          actions: [],
+        }));
+      }
+
+      // Fallback to single-step workflow if no default workflow exists
+      return [
+        {
+          stepNumber: 1,
+          departmentId: ticket.department,
+          departmentName: ticket.department,
+          status: "pending",
+          actions: [],
+        },
+      ];
+    }
+
+    const workflow = await this.getWorkflow(workflowId);
+    if (!workflow) {
+      throw new Error("Workflow not found");
+    }
+
+    return workflow.steps.map((step, index) => ({
+      stepNumber: index + 1,
+      departmentId: step.departmentId,
+      departmentName: step.departmentName,
+      status: index === 0 ? "in_progress" : "pending",
+      actions: [],
+    }));
+  }
+
+  // Seed random users per department
+  async seedUsersIfEmpty(): Promise<void> {
+    const db = this.ensureDB();
+    if (!db) return;
+
+    return new Promise((resolve, reject) => {
+      // First check if there are existing users
+      const checkTx = db.transaction(["users"], "readonly");
+      const checkStore = checkTx.objectStore("users");
+      const getAllReq = checkStore.getAll();
+      getAllReq.onsuccess = async () => {
+        const existing: User[] = getAllReq.result || [];
+        if (existing.length > 0) {
+          resolve();
+          return;
+        }
+
+        // Get departments to attach users to
+        const deptTx = db.transaction(["departments"], "readonly");
+        const deptStore = deptTx.objectStore("departments");
+        const deptReq = deptStore.getAll();
+        deptReq.onsuccess = () => {
+          const departments: Department[] = deptReq.result || [];
+          const sampleFirst = ["Alex", "Maya", "Sam", "Layla", "Omar", "Sara", "Yusuf", "Noura", "Tariq", "Lina"];
+          const sampleLast = ["Hassan", "Saleh", "Rahman", "Farouk", "Karim", "Nassar", "Fahad", "Adel", "Khalid", "Yasin"];
+
+          // Open a dedicated write transaction now
+          const writeTx = db.transaction(["users"], "readwrite");
+          const writeStore = writeTx.objectStore("users");
+
+          for (const dept of departments) {
+            const num = 3; // three users per department
+            for (let i = 0; i < num; i++) {
+              const first = sampleFirst[(Math.random() * sampleFirst.length) | 0];
+              const last = sampleLast[(Math.random() * sampleLast.length) | 0];
+              const user: User = {
+                id: this.generateId(),
+                name: `${first} ${last}`,
+                department: dept.name,
+              };
+              writeStore.add(user);
+            }
+          }
+
+          writeTx.oncomplete = () => resolve();
+          writeTx.onerror = () => reject(writeTx.error!);
+        };
+        deptReq.onerror = () => reject(deptReq.error!);
+      };
+      getAllReq.onerror = () => reject(getAllReq.error!);
+    });
+  }
+
+  async getUsersByDepartment(departmentName: string): Promise<User[]> {
+    const db = this.ensureDB();
+    if (!db) return [];
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["users"], "readonly");
+      const store = transaction.objectStore("users");
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const all: User[] = req.result || [];
+        resolve(all.filter((u) => u.department === departmentName));
+      };
+      req.onerror = () => reject(req.error!);
+    });
+  }
+
+  // Add a department action to a workflow step
+  async addDepartmentAction(ticketId: string, stepNumber: number, actionType: "in_progress" | "completed", notes: string, isComplete: boolean, performedBy?: string, newAssignee?: string): Promise<Ticket> {
+    const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["tickets"], "readwrite");
+      const store = transaction.objectStore("tickets");
+      const getRequest = store.get(ticketId);
+
+      getRequest.onsuccess = () => {
+        const ticket = getRequest.result;
+        if (!ticket) {
+          reject(new Error("Ticket not found"));
+          return;
+        }
+
+        // Ensure workflowStatus includes all steps from the assigned/default workflow
+        const updatedWorkflowStatus = [...(ticket.workflowStatus || [])];
+        // Cannot use await in this callback in some build modes; gracefully skip population here.
+        const stepIndex = updatedWorkflowStatus.findIndex((step) => step.stepNumber === stepNumber);
+
+        if (stepIndex === -1) {
+          reject(new Error("Workflow step not found"));
+          return;
+        }
+
+        // Create new action
+        const newAction: DepartmentAction = {
+          id: this.generateId(),
+          actionType,
+          notes,
+          timestamp: new Date(),
+          isComplete,
+          performedBy,
+          newAssignee,
+        };
+
+        // Add action to the step
+        updatedWorkflowStatus[stepIndex] = {
+          ...updatedWorkflowStatus[stepIndex],
+          actions: [...(updatedWorkflowStatus[stepIndex].actions || []), newAction],
+          status: actionType === "in_progress" ? "in_progress" : isComplete ? "completed" : updatedWorkflowStatus[stepIndex].status,
+          completedAt: isComplete ? new Date() : updatedWorkflowStatus[stepIndex].completedAt,
+        };
+
+        // If the current step is completed, set the next step (if any) to pending
+        if (isComplete) {
+          const nextIndex = stepIndex + 1;
+          if (nextIndex < updatedWorkflowStatus.length) {
+            updatedWorkflowStatus[nextIndex] = {
+              ...updatedWorkflowStatus[nextIndex],
+              status: "pending",
+            };
+            // Ensure any steps after next are also marked as pending (distinct from completed)
+            for (let i = nextIndex + 1; i < updatedWorkflowStatus.length; i++) {
+              updatedWorkflowStatus[i] = { ...updatedWorkflowStatus[i], status: "pending" };
+            }
+          }
+        }
+
+        const applyAndSave = (finalStatus: Ticket["status"], nextIsLast: boolean) => {
+          const nextStepObj = updatedWorkflowStatus[stepIndex + 1];
+          const nextDeptName = nextStepObj ? nextStepObj.departmentName : updatedWorkflowStatus[stepIndex].departmentName;
+          const updatedTicket: Ticket = {
+            ...ticket,
+            workflowStatus: updatedWorkflowStatus,
+            status: finalStatus,
+            currentWorkflowStep: isComplete && !nextIsLast ? stepNumber + 1 : stepNumber,
+            currentDepartment: isComplete && !nextIsLast ? nextDeptName : updatedWorkflowStatus[stepIndex].departmentName,
+            updatedAt: new Date(),
+          };
+
+          // Use a fresh transaction; the original may be inactive due to async callbacks
+          const saveTx = db.transaction(["tickets"], "readwrite");
+          const saveStore = saveTx.objectStore("tickets");
+          const putRequest = saveStore.put(updatedTicket);
+          putRequest.onsuccess = () => resolve(updatedTicket);
+          putRequest.onerror = () => reject(putRequest.error!);
+        };
+
+        // Determine ticket status based on workflow progress
+        const allStepsCompleted = updatedWorkflowStatus.every((step) => step.status === "completed");
+        const isLastInArray = stepNumber === updatedWorkflowStatus.length;
+
+        let provisionalStatus: Ticket["status"] = ticket.status;
+        if (actionType === "in_progress" && ticket.status === "Open") {
+          provisionalStatus = "In Progress";
+        }
+
+        if (!isComplete) {
+          applyAndSave(provisionalStatus, isLastInArray);
+          return;
+        }
+
+        // If completed, confirm whether this is the last workflow step by reading workflows store
+        const wfTx = db.transaction(["workflows"], "readonly");
+        const wfStore = wfTx.objectStore("workflows");
+        let wfReq: IDBRequest;
+        if (ticket.workflowId) {
+          wfReq = wfStore.get(ticket.workflowId);
+        } else {
+          wfReq = wfStore.getAll();
+        }
+
+        wfReq.onsuccess = () => {
+          let isLastByWorkflow = isLastInArray;
+          const data = wfReq.result as unknown;
+          if (data) {
+            if (Array.isArray(data)) {
+              const arr = data as { isDefault?: boolean; steps?: { departmentId: string; departmentName: string }[] }[];
+              const def = arr.find((w) => w.isDefault);
+              if (def && def.steps && def.steps.length) isLastByWorkflow = stepNumber === def.steps.length;
+              // Ensure next step exists if needed
+              if (!isLastByWorkflow) {
+                const nextIndex = stepIndex + 1;
+                if (!updatedWorkflowStatus[nextIndex] && def && def.steps && def.steps[nextIndex]) {
+                  const s = def.steps[nextIndex];
+                  updatedWorkflowStatus[nextIndex] = {
+                    stepNumber: nextIndex + 1,
+                    departmentId: s.departmentId,
+                    departmentName: s.departmentName,
+                    status: "pending",
+                    actions: [],
+                  };
+                }
+              }
+            } else {
+              const obj = data as { steps?: { departmentId: string; departmentName: string }[] };
+              if (obj.steps && obj.steps.length) isLastByWorkflow = stepNumber === obj.steps.length;
+              if (!isLastByWorkflow) {
+                const nextIndex = stepIndex + 1;
+                if (!updatedWorkflowStatus[nextIndex] && obj.steps && obj.steps[nextIndex]) {
+                  const s = obj.steps[nextIndex];
+                  updatedWorkflowStatus[nextIndex] = {
+                    stepNumber: nextIndex + 1,
+                    departmentId: s.departmentId,
+                    departmentName: s.departmentName,
+                    status: "pending",
+                    actions: [],
+                  };
+                }
+              }
+            }
+          }
+
+          const finalStatus = isLastByWorkflow && allStepsCompleted ? "Resolved" : provisionalStatus;
+          applyAndSave(finalStatus, isLastByWorkflow);
+        };
+
+        wfReq.onerror = () => {
+          // Fallback: do not resolve unless all steps in array are completed and it's last in array
+          const finalStatus = isLastInArray && allStepsCompleted ? "Resolved" : provisionalStatus;
+          applyAndSave(finalStatus, isLastInArray);
+        };
+      };
+
+      getRequest.onerror = () => reject(getRequest.error!);
+    });
+  }
+
+  // Get current workflow step for a ticket
+  getCurrentWorkflowStep(ticket: Ticket): WorkflowStepStatus | null {
+    if (!ticket.workflowStatus || ticket.workflowStatus.length === 0) {
+      return null;
+    }
+
+    // Find the first step that's not completed
+    const currentStep = ticket.workflowStatus.find((step) => step.status !== "completed");
+    return currentStep || ticket.workflowStatus[ticket.workflowStatus.length - 1];
+  }
+
+  // Migrate existing workflow status to include actions array
+  private migrateWorkflowStatus(workflowStatus: WorkflowStepStatus[]): WorkflowStepStatus[] {
+    return workflowStatus.map((step) => ({
+      ...step,
+      actions: step.actions || [],
+    }));
   }
 
   async resetDatabase(): Promise<void> {

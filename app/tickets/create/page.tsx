@@ -30,10 +30,12 @@ export default function CreateTicketPage() {
     unitId: "",
     ticketOwner: "",
     description: "",
+    assignee: "",
   });
 
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [estimatedDueDate, setEstimatedDueDate] = useState<Date | null>(null);
+  const [departmentUsers, setDepartmentUsers] = useState<string[]>([]);
 
   const loadDepartments = async () => {
     try {
@@ -74,6 +76,24 @@ export default function CreateTicketPage() {
     }
   }, [formData.ticketType, selectedDepartment, mounted]);
 
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (selectedDepartment?.name) {
+        try {
+          await storage.init();
+          const users = await storage.getUsersByDepartment(selectedDepartment.name);
+          setDepartmentUsers(users.map((u) => u.name));
+        } catch (error) {
+          console.error("Error loading department users:", error);
+          setDepartmentUsers([]);
+        }
+      } else {
+        setDepartmentUsers([]);
+      }
+    };
+    loadUsers();
+  }, [selectedDepartment]);
+
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
     return (
@@ -93,6 +113,7 @@ export default function CreateTicketPage() {
       department: departmentId,
       subCategory: "",
       ticketType: "",
+      assignee: "",
     }));
   };
 
@@ -124,6 +145,7 @@ export default function CreateTicketPage() {
         unitId: formData.unitId,
         workingDays: ticketType.defaultWD,
         ticketOwner: formData.ticketOwner,
+        assignee: formData.assignee,
         description: formData.description,
         status: "Open" as const,
         priority: ticketType.priority,
@@ -178,13 +200,13 @@ export default function CreateTicketPage() {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Main Form */}
             <div className="xl:col-span-2">
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
-                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg p-4 m-0">
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm p-0">
+                <CardHeader className="bg-blue-100 border border-blue-300 text-blue-900 rounded-t-lg p-4 m-0">
                   <CardTitle className="text-2xl flex items-center gap-2">
                     <Ticket className="w-6 h-6" />
                     Ticket Information
                   </CardTitle>
-                  <CardDescription className="text-blue-100">Provide the necessary details for the ticket</CardDescription>
+                  <CardDescription className="text-blue-800">Provide the necessary details for the ticket</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6 pt-6">
                   <form onSubmit={handleSubmit} className="space-y-6">
@@ -314,6 +336,24 @@ export default function CreateTicketPage() {
                       </div>
 
                       <div className="space-y-3">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Assign To <span className="text-red-500">*</span>
+                        </Label>
+                        <Select value={formData.assignee} onValueChange={(v) => setFormData((prev) => ({ ...prev, assignee: v }))} disabled={!selectedDepartment}>
+                          <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 transition-colors disabled:bg-gray-50">
+                            <SelectValue placeholder="Choose assignee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {departmentUsers.map((name) => (
+                              <SelectItem key={name} value={name}>
+                                {name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-3">
                         <Label htmlFor="description" className="text-sm font-medium text-gray-700">
                           Description <span className="text-gray-400 text-xs">(Optional)</span>
                         </Label>
@@ -323,7 +363,7 @@ export default function CreateTicketPage() {
 
                     {/* Action Buttons */}
                     <div className="flex gap-4 pt-6 border-t border-gray-200">
-                      <Button type="submit" disabled={submitting} className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer">
+                      <Button type="submit" disabled={submitting} className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
                         {submitting ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -349,14 +389,14 @@ export default function CreateTicketPage() {
 
             {/* Preview Sidebar */}
             <div className="xl:col-span-1">
-              <div>
-                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm overflow-hidden p-0">
-                  <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg p-4 m-0">
+              <div className="sticky top-0">
+                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm p-0">
+                  <CardHeader className="bg-green-100 border border-green-300 text-green-900 rounded-t-lg p-4 m-0">
                     <CardTitle className="text-xl flex items-center gap-2">
                       <Calendar className="w-5 h-5" />
                       Ticket Preview
                     </CardTitle>
-                    <CardDescription className="text-green-100">Review your ticket details</CardDescription>
+                    <CardDescription className="text-green-800">Review your ticket details</CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-6 space-y-4">
                     {/* Department & Type */}

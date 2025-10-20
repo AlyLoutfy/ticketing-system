@@ -10,26 +10,70 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { storage, Ticket, Department, WorkflowResolution } from "@/lib/storage";
+import { storage, Ticket, Department, WorkflowResolution, Workflow } from "@/lib/storage";
 import { formatDate, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { WorkflowProgressBadge } from "@/components/ui/workflow-progress-badge";
+import { DepartmentActionModal } from "@/components/DepartmentActionModal";
 import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
-import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter } from "lucide-react";
+import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 // Helper function to check if text is truncated
-const isTextTruncated = (text: string, maxWidth: number) => {
+const isTextTruncated = (text: string, maxWidth: number = 200): boolean => {
   // Rough estimation: average character width is about 8px, so we calculate approximate width
   const estimatedWidth = text.length * 8;
   return estimatedWidth > maxWidth;
+};
+
+// Helper function to get workflow SLA for a ticket
+const getWorkflowSLA = (ticket: Ticket, workflows: Workflow[]) => {
+  const workflowId = ticket.workflowId;
+
+  if (!workflowId) {
+    // If no workflow assigned, use default workflow
+    const defaultWorkflow = workflows.find((w) => w.isDefault);
+    if (!defaultWorkflow) return ticket.sla;
+
+    const totalDays = defaultWorkflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
+    const unit = defaultWorkflow.steps[0]?.slaUnit || "days";
+    return {
+      value: totalDays,
+      unit: unit === "hours" ? ("hours" as const) : ("days" as const),
+    };
+  }
+
+  const workflow = workflows.find((w) => w.id === workflowId);
+  if (!workflow) return ticket.sla;
+
+  const totalDays = workflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
+  const unit = workflow.steps[0]?.slaUnit || "days";
+  return {
+    value: totalDays,
+    unit: unit === "hours" ? ("hours" as const) : ("days" as const),
+  };
+};
+
+// Helper function to get total workflow steps for a ticket
+const getWorkflowTotalSteps = (ticket: Ticket, workflows: Workflow[]) => {
+  const workflowId = ticket.workflowId;
+
+  if (!workflowId) {
+    // If no workflow assigned, use default workflow
+    const defaultWorkflow = workflows.find((w) => w.isDefault);
+    return defaultWorkflow?.steps.length || 4;
+  }
+
+  const workflow = workflows.find((w) => w.id === workflowId);
+  return workflow?.steps.length || 4;
 };
 
 export default function Home() {
   const router = useRouter();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowResolutions, setWorkflowResolutions] = useState<Map<string, WorkflowResolution[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
@@ -63,6 +107,10 @@ export default function Home() {
     newValue?: string;
   } | null>(null);
 
+  // Department action modal state
+  const [showDepartmentAction, setShowDepartmentAction] = useState(false);
+  const [selectedTicketForAction, setSelectedTicketForAction] = useState<Ticket | null>(null);
+
   // Inline editing state
 
   // Calendar state for push due date
@@ -79,9 +127,15 @@ export default function Home() {
         await storage.seedSampleTickets();
       }
 
-      const [ticketsData, departmentsData] = await Promise.all([storage.getTickets(), storage.getDepartments()]);
+      // Ensure default workflow exists
+      await storage.seedDefaultWorkflow();
+
+      // Ensure users are seeded once departments exist
+      const [ticketsData, departmentsData, workflowsData] = await Promise.all([storage.getTickets(), storage.getDepartments(), storage.getWorkflows()]);
+      await storage.seedUsersIfEmpty();
       setTickets(ticketsData);
       setDepartments(departmentsData);
+      setWorkflows(workflowsData);
 
       // Load workflow resolutions for all tickets
       const resolutionsMap = new Map();
@@ -154,6 +208,9 @@ export default function Home() {
   // Pagination logic
   const totalTickets = filteredTickets.length;
   const totalPages = Math.ceil(totalTickets / ticketsPerPage);
+
+  // Count tickets due today
+  const ticketsDueToday = filteredTickets.filter((ticket) => getDaysUntilDue(ticket.dueDate) === 0).length;
   const startIndex = (currentPage - 1) * ticketsPerPage;
   const endIndex = startIndex + ticketsPerPage;
   const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
@@ -209,14 +266,59 @@ export default function Home() {
     }
   };
 
+  const handleDepartmentAction = async (isComplete: boolean, notes: string, assignee?: string) => {
+    if (!selectedTicketForAction) return;
+
+    try {
+      const currentStep = storage.getCurrentWorkflowStep(selectedTicketForAction);
+      if (!currentStep) {
+        showToast("No current workflow step found", "error");
+        return;
+      }
+
+      // Determine action type based on completion status
+      const actionType = isComplete ? "completed" : "in_progress";
+
+      // Add department action
+      const updatedTicket = await storage.addDepartmentAction(selectedTicketForAction.id, currentStep.stepNumber, actionType, notes, isComplete, selectedTicketForAction.assignee, assignee);
+
+      // Optionally reassign current assignee when in progress
+      if (!isComplete && assignee) {
+        await storage.updateTicket(selectedTicketForAction.id, { assignee });
+      }
+
+      // Refresh tickets
+      const updatedTickets = await storage.getTickets();
+      setTickets(updatedTickets);
+
+      showToast(`Action ${isComplete ? "completed" : "started"} successfully!`, "success");
+    } catch (error) {
+      console.error("Error adding department action:", error);
+      showToast("Failed to add department action", "error");
+    }
+  };
+
+  const openDepartmentAction = (ticket: Ticket) => {
+    const currentStep = storage.getCurrentWorkflowStep(ticket);
+    if (!currentStep) {
+      showToast("No workflow step available for this ticket", "error");
+      return;
+    }
+
+    setSelectedTicketForAction(ticket);
+    setShowDepartmentAction(true);
+  };
+
   const getStatusCount = (status: string) => {
     return tickets.filter((ticket) => ticket.status === status).length;
   };
 
   const getTicketNumber = (ticketId: string) => {
-    // Extract numeric part from ticket ID (e.g., "id_123" -> "123")
+    // Extract numeric part and show only the last 4 digits for brevity
     const match = ticketId.match(/\d+/);
-    return match ? match[0] : ticketId;
+    if (!match) return ticketId;
+    const digits = match[0];
+    return digits.length > 4 ? digits.slice(-4) : digits;
   };
 
   const handleTicketIdClick = (ticket: Ticket) => {
@@ -242,7 +344,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-sm text-gray-500">{totalTickets} tickets</p>
+              <p className="text-sm text-gray-500">{ticketsDueToday} tickets due today</p>
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/tickets/create">
@@ -520,6 +622,7 @@ export default function Home() {
                     <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket ID</th>
                     <th className="w-48 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</th>
                     <th className="w-40 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket Type</th>
+                    <th className="w-36 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
                     <th className="w-32 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                     <th className="w-20 px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SLA</th>
@@ -572,6 +675,7 @@ export default function Home() {
                             ticket.ticketType
                           )}
                         </td>
+                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{ticket.assignee || "—"}</td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap">
                           <Badge
                             variant="outline"
@@ -615,18 +719,10 @@ export default function Home() {
                           </Badge>
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                          <SLADisplay sla={ticket.sla} />
+                          <SLADisplay sla={getWorkflowSLA(ticket, workflows)} />
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap">
-                          <WorkflowProgressBadge
-                            currentStep={ticket.currentWorkflowStep || 1}
-                            totalSteps={4} // Default to 4 steps, should be dynamic based on workflow
-                            resolutions={workflowResolutions.get(ticket.id) || []}
-                            currentDepartment={ticket.currentDepartment}
-                            isFullyResolved={ticket.isFullyResolved}
-                            status={ticket.status}
-                            ticketCreatedAt={ticket.createdAt}
-                          />
+                          <WorkflowProgressBadge currentStep={ticket.currentWorkflowStep || 1} totalSteps={getWorkflowTotalSteps(ticket, workflows)} resolutions={workflowResolutions.get(ticket.id) || []} currentDepartment={ticket.currentDepartment} isFullyResolved={ticket.isFullyResolved} status={ticket.status} ticketCreatedAt={ticket.createdAt} workflowStatus={ticket.workflowStatus} />
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap" suppressHydrationWarning>
                           {(() => {
@@ -662,6 +758,13 @@ export default function Home() {
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">
                           <div className="flex space-x-1">
+                            {/* Department Action Button */}
+                            {ticket.status !== "Closed" && ticket.status !== "Resolved" && (
+                              <Button variant="ghost" size="sm" onClick={() => openDepartmentAction(ticket)} className="cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Take action on this ticket">
+                                <PlayCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+
                             <Link href={`/ticket-details?id=${ticket.id}`}>
                               <Button variant="ghost" size="sm" className="cursor-pointer">
                                 <Eye className="h-4 w-4" />
@@ -767,6 +870,18 @@ export default function Home() {
           title="Confirm Action"
           description={`Are you sure you want to ${confirmationAction?.type === "close" ? "close" : "update"} this ticket?`}
           variant="destructive"
+        />
+
+        {/* Department Action Modal */}
+        <DepartmentActionModal
+          isOpen={showDepartmentAction}
+          onClose={() => {
+            setShowDepartmentAction(false);
+            setSelectedTicketForAction(null);
+          }}
+          onConfirm={handleDepartmentAction}
+          ticket={selectedTicketForAction}
+          currentStep={selectedTicketForAction ? storage.getCurrentWorkflowStep(selectedTicketForAction) : null}
         />
       </div>
 
