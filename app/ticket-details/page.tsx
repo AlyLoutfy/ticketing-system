@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkflowProgress } from "@/components/WorkflowProgress";
+import { ReassignmentModal } from "@/components/ReassignmentModal";
 import { storage, Ticket, WorkflowResolution, Workflow } from "@/lib/storage";
 import { formatDate, getPriorityColor, getStatusColor, getDaysUntilDue, isOverdue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
@@ -22,6 +23,7 @@ function TicketDetailsContent() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showReassignmentModal, setShowReassignmentModal] = useState(false);
 
   const loadWorkflowResolutions = useCallback(async () => {
     if (!ticketId) return;
@@ -300,9 +302,15 @@ function TicketDetailsContent() {
                   </div>
                   <div className="mt-3">
                     <span className="text-sm font-medium text-gray-600">Current Assignee</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">{ticket.assignee || "—"}</span>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-900">{ticket.assignee || "—"}</span>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setShowReassignmentModal(true)} className="text-xs h-7 px-2">
+                        <Edit className="w-3 h-3 mr-1" />
+                        Reassign
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -370,6 +378,19 @@ function TicketDetailsContent() {
           </div>
         </div>
       </div>
+
+      {/* Reassignment Modal */}
+      <ReassignmentModal
+        isOpen={showReassignmentModal}
+        onClose={() => setShowReassignmentModal(false)}
+        ticketId={ticket.id}
+        currentAssignee={ticket.assignee}
+        currentDepartment={ticket.currentDepartment}
+        onReassigned={(newAssignee) => {
+          setTicket((prev) => (prev ? { ...prev, assignee: newAssignee } : null));
+          setShowReassignmentModal(false);
+        }}
+      />
     </div>
   );
 }

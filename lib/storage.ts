@@ -888,6 +888,70 @@ class IndexedDBStorage {
     }
   }
 
+  // Reassign ticket to a new assignee
+  async reassignTicket(ticketId: string, newAssignee: string): Promise<Ticket> {
+    const db = this.ensureDB();
+    if (!db) throw new Error("Database not available");
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["tickets", "ticketHistory"], "readwrite");
+      const ticketStore = transaction.objectStore("tickets");
+      const historyStore = transaction.objectStore("ticketHistory");
+
+      const getRequest = ticketStore.get(ticketId);
+
+      getRequest.onsuccess = () => {
+        const ticket = getRequest.result;
+        if (!ticket) {
+          reject(new Error("Ticket not found"));
+          return;
+        }
+
+        const oldAssignee = ticket.assignee;
+        const updatedTicket = {
+          ...ticket,
+          assignee: newAssignee,
+          updatedAt: new Date(),
+        };
+
+        // Update the ticket
+        const putRequest = ticketStore.put(updatedTicket);
+
+        putRequest.onsuccess = () => {
+          // Add reassignment to history
+          const historyEntry = {
+            id: this.generateId(),
+            ticketId: ticketId,
+            field: "assignee",
+            oldValue: oldAssignee || "—",
+            newValue: newAssignee,
+            changedBy: "System", // You might want to pass the current user here
+            changedAt: new Date(),
+            changeType: "reassignment" as const,
+          };
+
+          const historyRequest = historyStore.add(historyEntry);
+
+          historyRequest.onsuccess = () => {
+            resolve(updatedTicket);
+          };
+
+          historyRequest.onerror = () => {
+            reject(historyRequest.error!);
+          };
+        };
+
+        putRequest.onerror = () => {
+          reject(putRequest.error!);
+        };
+      };
+
+      getRequest.onerror = () => {
+        reject(getRequest.error!);
+      };
+    });
+  }
+
   // Force reseed all sample tickets (clears existing and creates new ones)
   async reseedSampleTickets(): Promise<void> {
     await this.clearAllTickets();

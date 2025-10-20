@@ -15,6 +15,7 @@ import { formatDate, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { WorkflowProgressBadge } from "@/components/ui/workflow-progress-badge";
 import { DepartmentActionModal } from "@/components/DepartmentActionModal";
+import { ReassignmentModal } from "@/components/ReassignmentModal";
 import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
 import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter, PlayCircle } from "lucide-react";
 import Link from "next/link";
@@ -110,6 +111,12 @@ export default function Home() {
   // Department action modal state
   const [showDepartmentAction, setShowDepartmentAction] = useState(false);
   const [selectedTicketForAction, setSelectedTicketForAction] = useState<Ticket | null>(null);
+  const [showReassignmentModal, setShowReassignmentModal] = useState(false);
+  const [selectedTicketForReassignment, setSelectedTicketForReassignment] = useState<{
+    id: string;
+    currentAssignee?: string;
+    currentDepartment?: string;
+  } | null>(null);
 
   // Inline editing state
 
@@ -295,6 +302,29 @@ export default function Home() {
     } catch (error) {
       console.error("Error adding department action:", error);
       showToast("Failed to add department action", "error");
+    }
+  };
+
+  const handleReassignTicket = (ticketId: string, currentAssignee?: string, currentDepartment?: string) => {
+    setSelectedTicketForReassignment({
+      id: ticketId,
+      currentAssignee,
+      currentDepartment,
+    });
+    setShowReassignmentModal(true);
+  };
+
+  const handleReassigned = async (_newAssignee: string) => {
+    if (!selectedTicketForReassignment) return;
+
+    try {
+      // Refresh tickets to get updated data
+      const updatedTickets = await storage.getTickets();
+      setTickets(updatedTickets);
+      setShowReassignmentModal(false);
+      setSelectedTicketForReassignment(null);
+    } catch (error) {
+      console.error("Error refreshing tickets after reassignment:", error);
     }
   };
 
@@ -675,7 +705,14 @@ export default function Home() {
                             ticket.ticketType
                           )}
                         </td>
-                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{ticket.assignee || "—"}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span>{ticket.assignee || "—"}</span>
+                            <Button variant="ghost" size="sm" onClick={() => handleReassignTicket(ticket.id, ticket.assignee, ticket.currentDepartment)} className="h-6 w-6 p-0 hover:bg-gray-100" title="Reassign ticket">
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap">
                           <Badge
                             variant="outline"
@@ -882,6 +919,19 @@ export default function Home() {
           onConfirm={handleDepartmentAction}
           ticket={selectedTicketForAction}
           currentStep={selectedTicketForAction ? storage.getCurrentWorkflowStep(selectedTicketForAction) : null}
+        />
+
+        {/* Reassignment Modal */}
+        <ReassignmentModal
+          isOpen={showReassignmentModal}
+          onClose={() => {
+            setShowReassignmentModal(false);
+            setSelectedTicketForReassignment(null);
+          }}
+          ticketId={selectedTicketForReassignment?.id || ""}
+          currentAssignee={selectedTicketForReassignment?.currentAssignee}
+          currentDepartment={selectedTicketForReassignment?.currentDepartment}
+          onReassigned={handleReassigned}
         />
       </div>
 
