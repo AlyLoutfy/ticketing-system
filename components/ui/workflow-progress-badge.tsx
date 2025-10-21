@@ -8,16 +8,15 @@ interface WorkflowProgressBadgeProps {
   currentStep: number;
   totalSteps: number;
   resolutions: WorkflowResolution[];
-  currentDepartment?: string;
   isFullyResolved?: boolean;
   status: string;
   ticketCreatedAt: Date;
   workflowStatus?: WorkflowStepStatus[];
 }
 
-export function WorkflowProgressBadge({ totalSteps, resolutions, currentDepartment, isFullyResolved, status, workflowStatus }: WorkflowProgressBadgeProps) {
+export function WorkflowProgressBadge({ totalSteps, resolutions, isFullyResolved, status, workflowStatus }: WorkflowProgressBadgeProps) {
   // Use new workflow status if available, otherwise fall back to old system
-  const completedSteps = workflowStatus ? workflowStatus.filter((step) => step.status === "completed").length : resolutions.length;
+  const completedSteps = workflowStatus ? workflowStatus.filter((step) => step.status === "completed" || step.status === "in_progress").length : resolutions.length;
 
   const totalWorkflowSteps = workflowStatus?.length || totalSteps;
   const isCompleted = isFullyResolved || status === "Resolved";

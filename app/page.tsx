@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { WorkflowProgressBadge } from "@/components/ui/workflow-progress-badge";
 import { DepartmentActionModal } from "@/components/DepartmentActionModal";
 import { ReassignmentModal } from "@/components/ReassignmentModal";
 import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
-import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter, PlayCircle } from "lucide-react";
+import { Plus, Ticket as TicketIcon, AlertTriangle, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -35,7 +35,10 @@ const getWorkflowSLA = (ticket: Ticket, workflows: Workflow[]) => {
   if (!workflowId) {
     // If no workflow assigned, use default workflow
     const defaultWorkflow = workflows.find((w) => w.isDefault);
-    if (!defaultWorkflow) return ticket.sla;
+    if (!defaultWorkflow) {
+      // Fallback to ticket's own SLA if no default workflow exists
+      return ticket.sla || { value: 7, unit: "days" as const };
+    }
 
     const totalDays = defaultWorkflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
     const unit = defaultWorkflow.steps[0]?.slaUnit || "days";
@@ -46,7 +49,10 @@ const getWorkflowSLA = (ticket: Ticket, workflows: Workflow[]) => {
   }
 
   const workflow = workflows.find((w) => w.id === workflowId);
-  if (!workflow) return ticket.sla;
+  if (!workflow) {
+    // Fallback to ticket's own SLA if workflow not found
+    return ticket.sla || { value: 7, unit: "days" as const };
+  }
 
   const totalDays = workflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
   const unit = workflow.steps[0]?.slaUnit || "days";
@@ -63,11 +69,20 @@ const getWorkflowTotalSteps = (ticket: Ticket, workflows: Workflow[]) => {
   if (!workflowId) {
     // If no workflow assigned, use default workflow
     const defaultWorkflow = workflows.find((w) => w.isDefault);
-    return defaultWorkflow?.steps.length || 4;
+    if (!defaultWorkflow) {
+      // Fallback to ticket's workflowStatus length or default to 1
+      return ticket.workflowStatus?.length || 1;
+    }
+    return defaultWorkflow.steps.length;
   }
 
   const workflow = workflows.find((w) => w.id === workflowId);
-  return workflow?.steps.length || 4;
+  if (!workflow) {
+    // Fallback to ticket's workflowStatus length or default to 1
+    return ticket.workflowStatus?.length || 1;
+  }
+
+  return workflow.steps.length;
 };
 
 export default function Home() {
@@ -137,9 +152,14 @@ export default function Home() {
       // Ensure default workflow exists
       await storage.seedDefaultWorkflow();
 
+      // Migrate existing tickets to default workflow
+      await storage.migrateTicketsToDefaultWorkflow();
+
       // Ensure users are seeded once departments exist
       const [ticketsData, departmentsData, workflowsData] = await Promise.all([storage.getTickets(), storage.getDepartments(), storage.getWorkflows()]);
-      await storage.seedUsersIfEmpty();
+
+      // Reseed users with new diverse names (clears existing and creates fresh ones)
+      await storage.reseedUsers();
       setTickets(ticketsData);
       setDepartments(departmentsData);
       setWorkflows(workflowsData);
@@ -287,7 +307,7 @@ export default function Home() {
       const actionType = isComplete ? "completed" : "in_progress";
 
       // Add department action
-      const updatedTicket = await storage.addDepartmentAction(selectedTicketForAction.id, currentStep.stepNumber, actionType, notes, isComplete, selectedTicketForAction.assignee, assignee);
+      await storage.addDepartmentAction(selectedTicketForAction.id, currentStep.stepNumber, actionType, notes, isComplete, selectedTicketForAction.assignee, assignee);
 
       // Optionally reassign current assignee when in progress
       if (!isComplete && assignee) {
@@ -314,7 +334,7 @@ export default function Home() {
     setShowReassignmentModal(true);
   };
 
-  const handleReassigned = async (_newAssignee: string) => {
+  const handleReassigned = async () => {
     if (!selectedTicketForReassignment) return;
 
     try {
@@ -759,7 +779,7 @@ export default function Home() {
                           <SLADisplay sla={getWorkflowSLA(ticket, workflows)} />
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap">
-                          <WorkflowProgressBadge currentStep={ticket.currentWorkflowStep || 1} totalSteps={getWorkflowTotalSteps(ticket, workflows)} resolutions={workflowResolutions.get(ticket.id) || []} currentDepartment={ticket.currentDepartment} isFullyResolved={ticket.isFullyResolved} status={ticket.status} ticketCreatedAt={ticket.createdAt} workflowStatus={ticket.workflowStatus} />
+                          <WorkflowProgressBadge currentStep={ticket.currentWorkflowStep || 1} totalSteps={getWorkflowTotalSteps(ticket, workflows)} resolutions={workflowResolutions.get(ticket.id) || []} isFullyResolved={ticket.isFullyResolved} status={ticket.status} ticketCreatedAt={ticket.createdAt} workflowStatus={ticket.workflowStatus} />
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap" suppressHydrationWarning>
                           {(() => {

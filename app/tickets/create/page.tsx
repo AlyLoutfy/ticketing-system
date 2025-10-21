@@ -8,16 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { storage, Department } from "@/lib/storage";
-import { formatDate, getPriorityColor } from "@/lib/utils/date-calculator";
+import { storage, Department, Workflow } from "@/lib/storage";
+import { formatDate } from "@/lib/utils/date-calculator";
 import { calculateDueDate as calculateSLADueDate } from "@/lib/utils/sla-formatter";
-import { ArrowLeft, Save, Calendar, Ticket } from "lucide-react";
+import { Save, Calendar, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClientToastContainer, showToast } from "@/components/ui/client-toast";
 
 export default function CreateTicketPage() {
   const router = useRouter();
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -49,8 +51,10 @@ export default function CreateTicketPage() {
         await storage.seedSampleTickets();
       }
 
-      const depts = await storage.getDepartments();
+      // Load both departments and workflows
+      const [depts, workflowsData] = await Promise.all([storage.getDepartments(), storage.getWorkflows()]);
       setDepartments(depts);
+      setWorkflows(workflowsData);
     } catch (error) {
       console.error("Error loading departments:", error);
     } finally {
@@ -68,13 +72,23 @@ export default function CreateTicketPage() {
     if (selectedDepartment && formData.ticketType && mounted) {
       const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
       if (ticketType) {
-        // Use defaultWD to create SLA object
-        const sla = { value: ticketType.defaultWD, unit: "days" as const };
+        // Get the workflow for this ticket type, or fall back to default workflow
+        const assignedWorkflow = ticketType.workflowId ? workflows.find((w) => w.id === ticketType.workflowId) : null;
+        const defaultWorkflow = workflows.find((w) => w.isDefault);
+        const selectedWorkflow = assignedWorkflow || defaultWorkflow;
+
+        // Calculate SLA from workflow if available, otherwise use ticket type defaultWD
+        let slaValue = ticketType.defaultWD;
+        if (selectedWorkflow) {
+          slaValue = selectedWorkflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
+        }
+
+        const sla = { value: slaValue, unit: "days" as const };
         const dueDate = calculateSLADueDate(sla, new Date());
         setEstimatedDueDate(dueDate);
       }
     }
-  }, [formData.ticketType, selectedDepartment, mounted]);
+  }, [formData.ticketType, selectedDepartment, mounted, workflows]);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -136,6 +150,17 @@ export default function CreateTicketPage() {
         return;
       }
 
+      // Get the workflow for this ticket type, or fall back to default workflow
+      const assignedWorkflow = ticketType.workflowId ? workflows.find((w) => w.id === ticketType.workflowId) : null;
+      const defaultWorkflow = workflows.find((w) => w.isDefault);
+      const selectedWorkflow = assignedWorkflow || defaultWorkflow;
+
+      // Calculate SLA from workflow if available, otherwise use ticket type defaultWD
+      let slaValue = ticketType.defaultWD;
+      if (selectedWorkflow) {
+        slaValue = selectedWorkflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
+      }
+
       const now = new Date();
       const newTicket = {
         department: selectedDepartment?.name || "",
@@ -143,30 +168,36 @@ export default function CreateTicketPage() {
         ticketType: ticketType.name,
         clientName: formData.clientName,
         unitId: formData.unitId,
-        workingDays: ticketType.defaultWD,
+        workingDays: slaValue, // Use calculated SLA value
         ticketOwner: formData.ticketOwner,
         assignee: formData.assignee,
         description: formData.description,
         status: "Open" as const,
         priority: ticketType.priority,
-        sla: { value: ticketType.defaultWD, unit: "days" as const },
+        sla: { value: slaValue, unit: "days" as const }, // Use calculated SLA value
         currentDepartment: selectedDepartment?.name,
         currentWorkflowStep: 1,
         isFullyResolved: false,
+        workflowId: selectedWorkflow?.id, // Assign the workflow from ticket type or default
         createdAt: now,
         dueDate:
           estimatedDueDate ||
           (() => {
-            const sla = { value: ticketType.defaultWD, unit: "days" as const };
+            const sla = { value: slaValue, unit: "days" as const };
             return calculateSLADueDate(sla, now);
           })(),
       };
 
       await storage.createTicket(newTicket);
-      router.push("/");
+      showToast("Success!", "success", "Ticket created successfully.");
+
+      // Wait a moment for the toast to show, then redirect
+      setTimeout(() => {
+        router.push("/");
+      }, 1500);
     } catch (error) {
       console.error("Error creating ticket:", error);
-      alert("Failed to create ticket. Please try again.");
+      showToast("Error", "error", "Failed to create ticket. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -285,12 +316,7 @@ export default function CreateTicketPage() {
                                 .filter((type) => type.subCategory === formData.subCategory)
                                 .map((type) => (
                                   <SelectItem key={type.id} value={type.id}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <span>{type.name}</span>
-                                      <Badge variant="secondary" className="ml-2 text-xs">
-                                        {type.defaultWD} WD
-                                      </Badge>
-                                    </div>
+                                    {type.name}
                                   </SelectItem>
                                 ))}
                           </SelectContent>
@@ -453,26 +479,56 @@ export default function CreateTicketPage() {
                       <p className="text-sm font-semibold text-gray-900 pl-4">{formData.ticketOwner || "Not entered"}</p>
                     </div>
 
-                    {/* Ticket Properties */}
+                    {/* Workflow Information */}
                     {selectedDepartment?.ticketTypes.find((t) => t.id === formData.ticketType) && (
-                      <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Ticket Properties</h4>
+                      <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="text-sm font-semibold text-blue-700 mb-3">Workflow Information</h4>
 
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Working Days</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.defaultWD} WD
-                          </Badge>
-                        </div>
+                        {(() => {
+                          const ticketType = selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType);
+                          if (!ticketType) return null;
 
-                        {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Priority</span>
-                            <Badge className="text-xs" style={{ backgroundColor: getPriorityColor(selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority || "").split(" ")[0], color: getPriorityColor(selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority || "").split(" ")[1] }}>
-                              {selectedDepartment.ticketTypes.find((t) => t.id === formData.ticketType)?.priority}
-                            </Badge>
-                          </div>
-                        )}
+                          // Get workflow information
+                          const assignedWorkflow = ticketType.workflowId ? workflows.find((w) => w.id === ticketType.workflowId) : null;
+                          const defaultWorkflow = workflows.find((w) => w.isDefault);
+                          const selectedWorkflow = assignedWorkflow || defaultWorkflow;
+
+                          if (!selectedWorkflow) {
+                            return (
+                              <div className="text-sm text-gray-600">
+                                <span className="text-gray-500">No workflow assigned</span>
+                              </div>
+                            );
+                          }
+
+                          const totalSLA = selectedWorkflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
+                          const totalSteps = selectedWorkflow.steps.length;
+
+                          return (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Workflow</span>
+                                <span className="text-sm font-medium text-blue-800">{selectedWorkflow.name}</span>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Total SLA</span>
+                                <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
+                                  {totalSLA} WD
+                                </Badge>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Steps</span>
+                                <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
+                                  {totalSteps} departments
+                                </Badge>
+                              </div>
+
+                              {assignedWorkflow ? <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">✓ Custom workflow assigned</div> : <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Using default workflow</div>}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
@@ -495,6 +551,7 @@ export default function CreateTicketPage() {
           </div>
         </div>
       </div>
+      <ClientToastContainer />
     </div>
   );
 }

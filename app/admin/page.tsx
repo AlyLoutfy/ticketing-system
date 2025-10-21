@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { storage, Department, TicketType, Workflow } from "@/lib/storage";
 import { WorkflowSLADisplay } from "@/components/ui/workflow-sla-display";
 import { WorkflowSelect } from "@/components/ui/workflow-select";
-import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, ArrowLeft, X, Check } from "lucide-react";
+import { Plus, Settings, Users, Ticket, Edit, Trash2, Save, ChevronDown, ChevronRight, Workflow as WorkflowIcon, X, Check } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminPage() {

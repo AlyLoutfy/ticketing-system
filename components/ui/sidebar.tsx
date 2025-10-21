@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Home, Ticket, Plus, Settings, Workflow, Users, BarChart3, Menu, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, Ticket, Plus, Settings, Workflow, Menu, X } from "lucide-react";
 
 interface SidebarProps {
   className?: string;

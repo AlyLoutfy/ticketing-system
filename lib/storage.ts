@@ -244,7 +244,7 @@ class IndexedDBStorage {
 
           // Create workflow resolutions store
           const resolutionStore = db.createObjectStore("workflowResolutions", { keyPath: "id" });
-          const usersStore = db.createObjectStore("users", { keyPath: "id" });
+          db.createObjectStore("users", { keyPath: "id" });
           resolutionStore.createIndex("ticketId", "ticketId");
           resolutionStore.createIndex("resolvedAt", "resolvedAt");
 
@@ -737,11 +737,18 @@ class IndexedDBStorage {
     const dueDate = new Date(startDate);
     let daysAdded = 0;
 
+    // Start counting from the next day
+    dueDate.setDate(dueDate.getDate() + 1);
+
     while (daysAdded < workingDays) {
-      dueDate.setDate(dueDate.getDate() + 1);
       // Skip weekends (Saturday = 6, Sunday = 0)
       if (dueDate.getDay() !== 0 && dueDate.getDay() !== 6) {
         daysAdded++;
+      }
+
+      // Move to next day only if we haven't reached the required working days
+      if (daysAdded < workingDays) {
+        dueDate.setDate(dueDate.getDate() + 1);
       }
     }
 
@@ -886,6 +893,38 @@ class IndexedDBStorage {
         await this.updateTicket(ticket.id, updatedTicket);
       }
     }
+  }
+
+  // Additional migration to ensure all tickets have workflowId
+  async migrateTicketsToDefaultWorkflow(): Promise<void> {
+    const tickets = await this.getTickets();
+    const defaultWorkflow = await this.getDefaultWorkflow();
+
+    if (!defaultWorkflow) {
+      console.log("No default workflow found for migration");
+      return;
+    }
+
+    let updateCount = 0;
+    for (const ticket of tickets) {
+      if (!ticket.workflowId) {
+        try {
+          const workflowStatus = await this.initializeWorkflowStatus(ticket, defaultWorkflow.id);
+          const updatedTicket = {
+            ...ticket,
+            workflowId: defaultWorkflow.id,
+            workflowStatus,
+            currentWorkflowStep: 1,
+            currentDepartment: workflowStatus[0]?.departmentName || ticket.department,
+          };
+          await this.updateTicket(ticket.id, updatedTicket);
+          updateCount++;
+        } catch (error) {
+          console.error("Error migrating ticket:", ticket.id, error);
+        }
+      }
+    }
+    console.log(`Migrated ${updateCount} tickets to default workflow`);
   }
 
   // Reassign ticket to a new assignee
@@ -2122,6 +2161,25 @@ class IndexedDBStorage {
     }));
   }
 
+  // Clear all users and reseed with new diverse names
+  async reseedUsers(): Promise<void> {
+    const db = this.ensureDB();
+    if (!db) return;
+
+    return new Promise((resolve, reject) => {
+      // Clear existing users
+      const clearTx = db.transaction(["users"], "readwrite");
+      const clearStore = clearTx.objectStore("users");
+      const clearReq = clearStore.clear();
+
+      clearReq.onsuccess = () => {
+        // Now seed new users
+        this.seedUsersIfEmpty().then(resolve).catch(reject);
+      };
+      clearReq.onerror = () => reject(clearReq.error!);
+    });
+  }
+
   // Seed random users per department
   async seedUsersIfEmpty(): Promise<void> {
     const db = this.ensureDB();
@@ -2145,24 +2203,42 @@ class IndexedDBStorage {
         const deptReq = deptStore.getAll();
         deptReq.onsuccess = () => {
           const departments: Department[] = deptReq.result || [];
-          const sampleFirst = ["Alex", "Maya", "Sam", "Layla", "Omar", "Sara", "Yusuf", "Noura", "Tariq", "Lina"];
-          const sampleLast = ["Hassan", "Saleh", "Rahman", "Farouk", "Karim", "Nassar", "Fahad", "Adel", "Khalid", "Yasin"];
+
+          // Expanded and more diverse name lists
+          const firstNames = ["Ahmed", "Mohammed", "Ali", "Omar", "Hassan", "Yusuf", "Tariq", "Karim", "Nasser", "Fahad", "Sara", "Fatima", "Aisha", "Mariam", "Noura", "Layla", "Yasmin", "Hala", "Rania", "Dina", "Alex", "Maya", "Sam", "Lina", "David", "Sarah", "Michael", "Emma", "James", "Lisa", "Ahmed", "Mohamed", "Omar", "Hassan", "Yusuf", "Tariq", "Karim", "Nasser", "Fahad", "Adel", "Sara", "Fatima", "Aisha", "Mariam", "Noura", "Layla", "Yasmin", "Hala", "Rania", "Dina", "Khaled", "Waleed", "Saad", "Rami", "Bassem", "Tamer", "Sherif", "Hany", "Mostafa", "Amr", "Nour", "Dina", "Rana", "Mona", "Heba", "Nesma", "Reham", "Shaimaa", "Amira", "Salma"];
+
+          const lastNames = ["Hassan", "Saleh", "Rahman", "Farouk", "Karim", "Nassar", "Fahad", "Adel", "Khalid", "Yasin", "Mahmoud", "Ibrahim", "Mostafa", "Ahmed", "Mohammed", "Ali", "Omar", "Hassan", "Yusuf", "Tariq", "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Al-Rashid", "Al-Zahra", "Al-Mansouri", "Al-Hakim", "Al-Sabah", "Al-Najjar", "Al-Khatib", "Al-Masri", "Al-Shami", "Al-Maghribi", "El-Sayed", "El-Masry", "El-Sharif", "El-Badawi", "El-Husseini", "El-Mahmoud", "El-Nasser", "El-Khatib", "El-Sabbagh", "El-Hakim", "Abdel-Rahman", "Abdel-Hamid", "Abdel-Moneim", "Abdel-Aziz", "Abdel-Meguid", "Abdel-Ghani", "Abdel-Salam", "Abdel-Kader", "Abdel-Malek", "Abdel-Rahim"];
 
           // Open a dedicated write transaction now
           const writeTx = db.transaction(["users"], "readwrite");
           const writeStore = writeTx.objectStore("users");
 
+          // Track used names to avoid duplicates
+          const usedNames = new Set<string>();
+
           for (const dept of departments) {
-            const num = 3; // three users per department
-            for (let i = 0; i < num; i++) {
-              const first = sampleFirst[(Math.random() * sampleFirst.length) | 0];
-              const last = sampleLast[(Math.random() * sampleLast.length) | 0];
-              const user: User = {
-                id: this.generateId(),
-                name: `${first} ${last}`,
-                department: dept.name,
-              };
-              writeStore.add(user);
+            const num = 5; // increased to five users per department
+            let attempts = 0;
+            let created = 0;
+
+            while (created < num && attempts < 100) {
+              // prevent infinite loop
+              const first = firstNames[(Math.random() * firstNames.length) | 0];
+              const last = lastNames[(Math.random() * lastNames.length) | 0];
+              const fullName = `${first} ${last}`;
+
+              // Check if this name combination is already used
+              if (!usedNames.has(fullName)) {
+                usedNames.add(fullName);
+                const user: User = {
+                  id: this.generateId(),
+                  name: fullName,
+                  department: dept.name,
+                };
+                writeStore.add(user);
+                created++;
+              }
+              attempts++;
             }
           }
 

@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { storage, Ticket, Department } from "@/lib/storage";
 import { formatDate, isOverdue, getDaysUntilDue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
-import { Plus, Search, Filter, Edit, Eye, Calendar, AlertTriangle, X } from "lucide-react";
+import { Plus, Search, Edit, Eye, Calendar, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
 
 // Helper function to check if text is truncated

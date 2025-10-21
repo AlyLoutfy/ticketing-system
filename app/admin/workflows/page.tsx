@@ -11,8 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { storage, Department, Workflow, WorkflowStep } from "@/lib/storage";
-import { Plus, Ticket, Edit, Trash2, Save, GripVertical, ArrowLeft, Star, StarOff } from "lucide-react";
-import Link from "next/link";
+import { Plus, Edit, Trash2, Save, GripVertical, ArrowLeft, Star, StarOff } from "lucide-react";
 import { ClientToastContainer, showToast } from "@/components/ui/client-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -33,9 +32,9 @@ function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { st
 
   return (
     <div ref={setNodeRef} style={style} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-200">
-      <div {...attributes} {...listeners} className="flex items-center justify-between cursor-grab active:cursor-grabbing">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1">
-          <div className="p-1">
+          <div {...attributes} {...listeners} className="p-1 cursor-grab active:cursor-grabbing">
             <GripVertical className="w-4 h-4 text-gray-400" />
           </div>
           <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-semibold">{index + 1}</div>
@@ -44,7 +43,7 @@ function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { st
           </div>
         </div>
 
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             <Label className="text-xs text-gray-500">SLA:</Label>
             <Input type="number" value={step.estimatedDays || 1} onChange={(e) => onUpdate(index, "estimatedDays", parseInt(e.target.value) || 1)} className="w-16 h-8 text-xs" min="1" />
@@ -63,10 +62,11 @@ function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { st
             variant="ghost"
             size="sm"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onRemove(index);
             }}
-            className="text-red-600 hover:text-red-700 cursor-pointer p-1 h-8 w-8"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer p-1 h-8 w-8"
           >
             <Trash2 className="w-3 h-3" />
           </Button>
@@ -376,7 +376,19 @@ function WorkflowsPageContent() {
               <Card>
                 <CardHeader>
                   <CardTitle>Workflow Steps ({workflowSteps.length})</CardTitle>
-                  <CardDescription>Drag and drop to reorder steps</CardDescription>
+                  <CardDescription>
+                    Drag and drop to reorder steps
+                    {workflowSteps.length > 0 && (
+                      <span className="ml-2 text-blue-600 font-medium">
+                        • Total SLA:{" "}
+                        {workflowSteps.reduce((total, step) => {
+                          const days = step.estimatedDays || 1;
+                          return step.slaUnit === "hours" ? total + Math.ceil(days / 8) : total + days;
+                        }, 0)}{" "}
+                        WD
+                      </span>
+                    )}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {workflowSteps.length === 0 ? (
@@ -459,6 +471,7 @@ function WorkflowsPageContent() {
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Steps</TableHead>
+                  <TableHead>Total SLA</TableHead>
                   <TableHead>Departments</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
@@ -486,6 +499,15 @@ function WorkflowsPageContent() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{workflow.steps.length} steps</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        {workflow.steps.reduce((total, step) => {
+                          const days = step.estimatedDays || 1;
+                          return step.slaUnit === "hours" ? total + Math.ceil(days / 8) : total + days;
+                        }, 0)}{" "}
+                        WD
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.steps.map((step) => getDepartmentName(step.departmentId)).join(" → ")}</div>

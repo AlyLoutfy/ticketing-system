@@ -10,12 +10,18 @@ export function calculateDueDate(startDate: Date, workingDays: number): Date {
   let currentDate = new Date(startDate);
   let daysAdded = 0;
 
-  while (daysAdded < workingDays) {
-    currentDate = addDays(currentDate, 1);
+  // Start counting from the next day
+  currentDate = addDays(currentDate, 1);
 
+  while (daysAdded < workingDays) {
     // Skip weekends (Saturday = 6, Sunday = 0)
     if (!isWeekend(currentDate)) {
       daysAdded++;
+    }
+
+    // Move to next day only if we haven't reached the required working days
+    if (daysAdded < workingDays) {
+      currentDate = addDays(currentDate, 1);
     }
   }
 

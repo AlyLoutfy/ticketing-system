@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkflowProgress } from "@/components/WorkflowProgress";
 import { ReassignmentModal } from "@/components/ReassignmentModal";
-import { storage, Ticket, WorkflowResolution, Workflow } from "@/lib/storage";
+import { storage, Ticket, Workflow } from "@/lib/storage";
 import { formatDate, getPriorityColor, getStatusColor, getDaysUntilDue, isOverdue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { ArrowLeft, Calendar, Clock, User, Building, FileText, AlertTriangle, CheckCircle, Edit, X, Home, Ticket as TicketIcon, Workflow as WorkflowIcon } from "lucide-react";
@@ -19,7 +19,6 @@ function TicketDetailsContent() {
   const ticketId = searchParams.get("id");
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [workflowResolutions, setWorkflowResolutions] = useState<WorkflowResolution[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,12 +27,44 @@ function TicketDetailsContent() {
   const loadWorkflowResolutions = useCallback(async () => {
     if (!ticketId) return;
     try {
-      const resolutions = await storage.getWorkflowResolutions(ticketId);
-      setWorkflowResolutions(resolutions);
+      await storage.getWorkflowResolutions(ticketId);
     } catch (err) {
       console.error("Error loading workflow resolutions:", err);
     }
   }, [ticketId]);
+
+  const getWorkflowSLA = (ticket: Ticket): { value: number; unit: "hours" | "days" } => {
+    const workflowId = ticket.workflowId;
+
+    if (!workflowId) {
+      // If no workflow assigned, use default workflow
+      const defaultWorkflow = workflows.find((w) => w.isDefault);
+      if (!defaultWorkflow) {
+        // Fallback to ticket's own SLA if no default workflow exists
+        return ticket.sla || { value: 7, unit: "days" as const };
+      }
+
+      const totalDays = defaultWorkflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
+      const unit = defaultWorkflow.steps[0]?.slaUnit || "days";
+      return {
+        value: totalDays,
+        unit: unit === "hours" ? ("hours" as const) : ("days" as const),
+      };
+    }
+
+    const workflow = workflows.find((w) => w.id === workflowId);
+    if (!workflow) {
+      // Fallback to ticket's own SLA if workflow not found
+      return ticket.sla || { value: 7, unit: "days" as const };
+    }
+
+    const totalDays = workflow.steps.reduce((total, step) => total + (step.estimatedDays || 1), 0);
+    const unit = workflow.steps[0]?.slaUnit || "days";
+    return {
+      value: totalDays,
+      unit: unit === "hours" ? ("hours" as const) : ("days" as const),
+    };
+  };
 
   const getAssignedWorkflow = (workflowId?: string): Workflow | null => {
     if (workflowId) {
@@ -133,25 +164,6 @@ function TicketDetailsContent() {
     if (!match) return id;
     const digits = match[0];
     return digits.length > 4 ? digits.slice(-4) : digits;
-  };
-
-  // Define workflow departments based on ticket type and department
-  const getWorkflowDepartments = (ticket: Ticket): string[] => {
-    // For now, create a simple 3-step workflow
-    // In a real system, this would be configurable based on ticket type
-    const baseDepartment = ticket.department;
-
-    // Common workflow patterns based on department
-    const workflowPatterns: Record<string, string[]> = {
-      "IT Support": [baseDepartment, "Technical Review", "Final Approval"],
-      HR: [baseDepartment, "Management Review", "Final Approval"],
-      Finance: [baseDepartment, "Compliance Review", "Final Approval"],
-      Legal: [baseDepartment, "Senior Review", "Final Approval"],
-      Operations: [baseDepartment, "Quality Review", "Final Approval"],
-    };
-
-    // Return specific pattern if available, otherwise use generic pattern
-    return workflowPatterns[baseDepartment] || [baseDepartment, "Review Department", "Final Department"];
   };
 
   return (
@@ -329,7 +341,7 @@ function TicketDetailsContent() {
                 <div>
                   <span className="text-sm font-medium text-gray-600">Total SLA</span>
                   <div className="mt-1">
-                    <SLADisplay sla={ticket.sla} />
+                    <SLADisplay sla={getWorkflowSLA(ticket)} />
                   </div>
                 </div>
                 <div>
