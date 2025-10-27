@@ -302,7 +302,7 @@ export function WorkflowTimeline({ resolutions, currentStep, totalSteps, current
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-gray-900">{sortedResolutions.length}</div>
-              <div className="text-sm text-gray-600">Steps Completed</div>
+              <div className="text-sm text-gray-600">Milestones Completed</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-600">{sortedResolutions.filter((r) => r.slaStatus === "met").length}</div>

@@ -4,8 +4,8 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, PlayCircle, ChevronDown } from "lucide-react";
-import { WorkflowStepStatus, Ticket } from "@/lib/storage";
+import { CheckCircle, Clock, PlayCircle, ChevronDown } from "lucide-react";
+import { WorkflowStepStatus, Ticket, WorkflowStep } from "@/lib/storage";
 import { storage } from "@/lib/storage";
 
 interface WorkflowProgressProps {
@@ -17,6 +17,7 @@ export function WorkflowProgress({ ticket, onTicketUpdate }: WorkflowProgressPro
   const currentStep = storage.getCurrentWorkflowStep(ticket);
   const [expandedStep, setExpandedStep] = React.useState<number | null>(null);
   const [displaySteps, setDisplaySteps] = React.useState<WorkflowStepStatus[]>(ticket.workflowStatus || []);
+  const [workflowSteps, setWorkflowSteps] = React.useState<WorkflowStep[]>([]);
 
   // Ensure we have the full list of workflow steps even if ticket.workflowStatus is minimal
   React.useEffect(() => {
@@ -31,6 +32,7 @@ export function WorkflowProgress({ ticket, onTicketUpdate }: WorkflowProgressPro
       const existing = ticket.workflowStatus || [];
 
       if (wf && wf.steps?.length) {
+        setWorkflowSteps(wf.steps);
         // Merge statuses from existing into workflow-defined steps
         const merged: WorkflowStepStatus[] = wf.steps.map((step, idx) => {
           const stepNumber = idx + 1;
@@ -153,7 +155,7 @@ export function WorkflowProgress({ ticket, onTicketUpdate }: WorkflowProgressPro
                     <div className={`w-2 h-2 rounded-full ${leftBar}`}></div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">Step {step.stepNumber}</span>
+                        <span className="font-medium text-sm">{workflowSteps[step.stepNumber - 1]?.milestoneTitle || `Milestone ${step.stepNumber}`}</span>
                         <Badge variant={getStepBadgeVariant(step)} className={getStepBadgeColor(step)}>
                           {toStartCase(step.status)}
                         </Badge>
@@ -223,7 +225,7 @@ export function WorkflowProgress({ ticket, onTicketUpdate }: WorkflowProgressPro
         <div className="pt-3 border-t">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">
-              Progress: {displaySteps.filter((s) => s.status === "completed").length} / {displaySteps.length} steps
+              Progress: {displaySteps.filter((s) => s.status === "completed").length} / {displaySteps.length} milestones
             </span>
             <span className="text-gray-500">Current: {currentStep?.departmentName || "None"}</span>
           </div>

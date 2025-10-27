@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkflowProgress } from "@/components/WorkflowProgress";
 import { ReassignmentModal } from "@/components/ReassignmentModal";
-import { storage, Ticket, Workflow } from "@/lib/storage";
+import { storage, Ticket, WorkflowResolution, Workflow } from "@/lib/storage";
 import { formatDate, getPriorityColor, getStatusColor, getDaysUntilDue, isOverdue } from "@/lib/utils/date-calculator";
 import { SLADisplay } from "@/components/ui/sla-display";
 import { ArrowLeft, Calendar, Clock, User, Building, FileText, AlertTriangle, CheckCircle, Edit, X, Home, Ticket as TicketIcon, Workflow as WorkflowIcon } from "lucide-react";
@@ -19,6 +19,7 @@ function TicketDetailsContent() {
   const ticketId = searchParams.get("id");
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [workflowResolutions, setWorkflowResolutions] = useState<WorkflowResolution[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,8 @@ function TicketDetailsContent() {
   const loadWorkflowResolutions = useCallback(async () => {
     if (!ticketId) return;
     try {
-      await storage.getWorkflowResolutions(ticketId);
+      const resolutions = await storage.getWorkflowResolutions(ticketId);
+      setWorkflowResolutions(resolutions);
     } catch (err) {
       console.error("Error loading workflow resolutions:", err);
     }
@@ -164,6 +166,25 @@ function TicketDetailsContent() {
     if (!match) return id;
     const digits = match[0];
     return digits.length > 4 ? digits.slice(-4) : digits;
+  };
+
+  // Define workflow departments based on ticket type and department
+  const getWorkflowDepartments = (ticket: Ticket): string[] => {
+    // For now, create a simple 3-step workflow
+    // In a real system, this would be configurable based on ticket type
+    const baseDepartment = ticket.department;
+
+    // Common workflow patterns based on department
+    const workflowPatterns: Record<string, string[]> = {
+      "IT Support": [baseDepartment, "Technical Review", "Final Approval"],
+      HR: [baseDepartment, "Management Review", "Final Approval"],
+      Finance: [baseDepartment, "Compliance Review", "Final Approval"],
+      Legal: [baseDepartment, "Senior Review", "Final Approval"],
+      Operations: [baseDepartment, "Quality Review", "Final Approval"],
+    };
+
+    // Return specific pattern if available, otherwise use generic pattern
+    return workflowPatterns[baseDepartment] || [baseDepartment, "Review Department", "Final Department"];
   };
 
   return (

@@ -8,13 +8,14 @@ interface WorkflowProgressBadgeProps {
   currentStep: number;
   totalSteps: number;
   resolutions: WorkflowResolution[];
+  currentDepartment?: string;
   isFullyResolved?: boolean;
   status: string;
   ticketCreatedAt: Date;
   workflowStatus?: WorkflowStepStatus[];
 }
 
-export function WorkflowProgressBadge({ totalSteps, resolutions, isFullyResolved, status, workflowStatus }: WorkflowProgressBadgeProps) {
+export function WorkflowProgressBadge({ totalSteps, resolutions, currentDepartment, isFullyResolved, status, workflowStatus }: WorkflowProgressBadgeProps) {
   // Use new workflow status if available, otherwise fall back to old system
   const completedSteps = workflowStatus ? workflowStatus.filter((step) => step.status === "completed" || step.status === "in_progress").length : resolutions.length;
 
@@ -57,7 +58,7 @@ export function WorkflowProgressBadge({ totalSteps, resolutions, isFullyResolved
               <span className="font-medium">Status:</span> {status}
             </div>
             <div>
-              <span className="font-medium">Steps Completed:</span> {completedSteps} of {totalWorkflowSteps}
+              <span className="font-medium">Milestones Completed:</span> {completedSteps} of {totalWorkflowSteps}
             </div>
             {currentStepInfo && (
               <div>
@@ -68,11 +69,11 @@ export function WorkflowProgressBadge({ totalSteps, resolutions, isFullyResolved
 
           {resolutions.length > 0 && (
             <div className="space-y-1">
-              <div className="font-medium text-xs">Completed Steps:</div>
+              <div className="font-medium text-xs">Completed Milestones:</div>
               {resolutions.slice(0, 3).map((resolution) => (
                 <div key={resolution.id} className="text-xs text-gray-600">
                   <div className="font-medium">
-                    Step {resolution.stepNumber}: {resolution.fromDepartment}
+                    Milestone {resolution.stepNumber}: {resolution.fromDepartment}
                   </div>
                   <div className="text-gray-500 truncate">{resolution.resolutionText.substring(0, 50)}...</div>
                 </div>

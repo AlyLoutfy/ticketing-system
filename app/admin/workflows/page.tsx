@@ -11,15 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { storage, Department, Workflow, WorkflowStep } from "@/lib/storage";
-import { Plus, Edit, Trash2, Save, GripVertical, ArrowLeft, Star, StarOff } from "lucide-react";
+import { Plus, Ticket, Edit, Trash2, Save, GripVertical, ArrowLeft, Star, StarOff } from "lucide-react";
+import Link from "next/link";
 import { ClientToastContainer, showToast } from "@/components/ui/client-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-// Sortable Step Card Component
-function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { step: WorkflowStep; index: number; onUpdate: (index: number, field: keyof WorkflowStep, value: string | number | boolean) => void; onRemove: (index: number) => void; departments: Department[] }) {
+// Sortable Milestone Card Component
+function SortableMilestoneCard({ step, index, onUpdate, onRemove, departments }: { step: WorkflowStep; index: number; onUpdate: (index: number, field: keyof WorkflowStep, value: string | number | boolean | undefined) => void; onRemove: (index: number) => void; departments: Department[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id });
 
   const style = {
@@ -31,46 +32,48 @@ function SortableStepCard({ step, index, onUpdate, onRemove, departments }: { st
   const department = departments.find((d) => d.id === step.departmentId);
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-200">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-1">
-          <div {...attributes} {...listeners} className="p-1 cursor-grab active:cursor-grabbing">
+    <div ref={setNodeRef} style={style} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+      <div className="p-4 space-y-2">
+        {/* First row: Drag handle, number badge, department name, SLA, Working Days, Delete button */}
+        <div className="flex items-center gap-3">
+          <div {...attributes} {...listeners} className="p-1 cursor-grab active:cursor-grabbing flex-shrink-0">
             <GripVertical className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-semibold">{index + 1}</div>
-          <div className="flex-1">
-            <h3 className="font-medium text-gray-900 text-sm">{department?.name || "Unknown Department"}</h3>
+          <div className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{index + 1}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 text-sm">{department?.name || "Unknown Department"}</h3>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5">
+              <Input type="number" value={step.estimatedDays ?? ""} onChange={(e) => onUpdate(index, "estimatedDays", e.target.value === "" ? undefined : parseInt(e.target.value) || undefined)} className="w-20 h-9 text-sm" min="0" placeholder="0" />
+              <Select value={step.slaUnit || "days"} onValueChange={(value) => onUpdate(index, "slaUnit", value)}>
+                <SelectTrigger className="w-36 h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hours">Hours</SelectItem>
+                  <SelectItem value="days">Working Days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemove(index);
+              }}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer flex-shrink-0 h-9"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-gray-500">SLA:</Label>
-            <Input type="number" value={step.estimatedDays || 1} onChange={(e) => onUpdate(index, "estimatedDays", parseInt(e.target.value) || 1)} className="w-16 h-8 text-xs" min="1" />
-            <Select value={step.slaUnit || "days"} onValueChange={(value) => onUpdate(index, "slaUnit", value)}>
-              <SelectTrigger className="w-32 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hours">Hours</SelectItem>
-                <SelectItem value="days">Working Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onRemove(index);
-            }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer p-1 h-8 w-8"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
-        </div>
+        {/* Second row: Milestone Title */}
+        <Input value={step.milestoneTitle || ""} onChange={(e) => onUpdate(index, "milestoneTitle", e.target.value)} placeholder="Milestone Title (e.g., Initial Review, Final Approval)" className="w-full h-9 text-sm" />
       </div>
     </div>
   );
@@ -184,7 +187,7 @@ function WorkflowsPageContent() {
     setWorkflowSteps([...workflowSteps, newStep]);
   };
 
-  const updateWorkflowStep = (index: number, field: keyof WorkflowStep, value: string | number | boolean) => {
+  const updateWorkflowStep = (index: number, field: keyof WorkflowStep, value: string | number | boolean | undefined) => {
     const updatedSteps = [...workflowSteps];
     updatedSteps[index] = { ...updatedSteps[index], [field]: value };
     setWorkflowSteps(updatedSteps);
@@ -220,7 +223,7 @@ function WorkflowsPageContent() {
   const handleCreateWorkflow = async () => {
     try {
       if (!workflowFormData.name.trim() || workflowSteps.length === 0) {
-        showToast("Please provide a name and at least one step", "error");
+        showToast("Please provide a name and at least one milestone", "error");
         return;
       }
 
@@ -246,7 +249,7 @@ function WorkflowsPageContent() {
 
     try {
       if (!workflowFormData.name.trim() || workflowSteps.length === 0) {
-        showToast("Please provide a name and at least one step", "error");
+        showToast("Please provide a name and at least one milestone", "error");
         return;
       }
 
@@ -352,13 +355,13 @@ function WorkflowsPageContent() {
                 <CardHeader>
                   <CardTitle>Workflow Details</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
                     <Label htmlFor="name">Workflow Name *</Label>
                     <Input id="name" value={workflowFormData.name} onChange={(e) => setWorkflowFormData({ ...workflowFormData, name: e.target.value })} placeholder="Enter workflow name" />
                   </div>
 
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea id="description" value={workflowFormData.description} onChange={(e) => setWorkflowFormData({ ...workflowFormData, description: e.target.value })} placeholder="Optional description" rows={3} />
                   </div>
@@ -375,15 +378,15 @@ function WorkflowsPageContent() {
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Workflow Steps ({workflowSteps.length})</CardTitle>
+                  <CardTitle>Workflow Milestones ({workflowSteps.length})</CardTitle>
                   <CardDescription>
-                    Drag and drop to reorder steps
+                    Drag and drop to reorder milestones
                     {workflowSteps.length > 0 && (
                       <span className="ml-2 text-blue-600 font-medium">
                         • Total SLA:{" "}
                         {workflowSteps.reduce((total, step) => {
-                          const days = step.estimatedDays || 1;
-                          return step.slaUnit === "hours" ? total + Math.ceil(days / 8) : total + days;
+                          if (!step.estimatedDays) return total;
+                          return step.slaUnit === "hours" ? total + Math.ceil(step.estimatedDays / 8) : total + step.estimatedDays;
                         }, 0)}{" "}
                         WD
                       </span>
@@ -396,15 +399,15 @@ function WorkflowsPageContent() {
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Plus className="w-8 h-8 text-gray-400" />
                       </div>
-                      <p className="text-lg font-medium">No steps added yet</p>
-                      <p className="text-sm">Click on departments below to add steps to your workflow</p>
+                      <p className="text-lg font-medium">No milestones added yet</p>
+                      <p className="text-sm">Click on departments below to add milestones to your workflow</p>
                     </div>
                   ) : (
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                       <SortableContext items={workflowSteps.map((step) => step.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
                           {workflowSteps.map((step, index) => (
-                            <SortableStepCard key={step.id} step={step} index={index} onUpdate={updateWorkflowStep} onRemove={removeWorkflowStep} departments={departments} />
+                            <SortableMilestoneCard key={step.id} step={step} index={index} onUpdate={updateWorkflowStep} onRemove={removeWorkflowStep} departments={departments} />
                           ))}
                         </div>
                       </SortableContext>
@@ -419,7 +422,7 @@ function WorkflowsPageContent() {
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Available Departments</CardTitle>
-              <CardDescription>Click on a department to add it as the next step in your workflow</CardDescription>
+              <CardDescription>Click on a department to add it as the next milestone in your workflow</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -470,7 +473,7 @@ function WorkflowsPageContent() {
                   <TableHead className="w-12">Default</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Steps</TableHead>
+                  <TableHead>Milestones</TableHead>
                   <TableHead>Total SLA</TableHead>
                   <TableHead>Departments</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
@@ -498,19 +501,19 @@ function WorkflowsPageContent() {
                       <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.description || "No description"}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{workflow.steps.length} steps</Badge>
+                      <Badge variant="outline">{workflow.steps.length} milestones</Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                         {workflow.steps.reduce((total, step) => {
-                          const days = step.estimatedDays || 1;
-                          return step.slaUnit === "hours" ? total + Math.ceil(days / 8) : total + days;
+                          if (!step.estimatedDays) return total;
+                          return step.slaUnit === "hours" ? total + Math.ceil(step.estimatedDays / 8) : total + step.estimatedDays;
                         }, 0)}{" "}
                         WD
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.steps.map((step) => getDepartmentName(step.departmentId)).join(" → ")}</div>
+                      <div className="text-sm text-gray-600 max-w-xs truncate">{workflow.steps.map((step) => step.milestoneTitle || getDepartmentName(step.departmentId)).join(" → ")}</div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

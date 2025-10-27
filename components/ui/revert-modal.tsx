@@ -61,7 +61,7 @@ export function RevertModal({ isOpen, onClose, onSubmit, ticketId, currentDepart
               <span className="font-medium text-blue-900">Current Department:</span> <span className="text-blue-700">{currentDepartment || "Not assigned"}</span>
             </div>
             <div className="text-sm mt-1">
-              <span className="font-medium text-blue-900">Workflow Steps Completed:</span> <span className="text-blue-700">{workflowResolutions.length}</span>
+              <span className="font-medium text-blue-900">Workflow Milestones Completed:</span> <span className="text-blue-700">{workflowResolutions.length}</span>
             </div>
           </div>
 

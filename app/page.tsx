@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { WorkflowProgressBadge } from "@/components/ui/workflow-progress-badge";
 import { DepartmentActionModal } from "@/components/DepartmentActionModal";
 import { ReassignmentModal } from "@/components/ReassignmentModal";
 import { showToast, ClientToastContainer } from "@/components/ui/client-toast";
-import { Plus, Ticket as TicketIcon, AlertTriangle, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter, PlayCircle } from "lucide-react";
+import { Plus, Ticket as TicketIcon, AlertTriangle, Settings, ChevronLeft, ChevronRight, X, Check, Eye, Edit, Filter, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -157,9 +157,7 @@ export default function Home() {
 
       // Ensure users are seeded once departments exist
       const [ticketsData, departmentsData, workflowsData] = await Promise.all([storage.getTickets(), storage.getDepartments(), storage.getWorkflows()]);
-
-      // Reseed users with new diverse names (clears existing and creates fresh ones)
-      await storage.reseedUsers();
+      await storage.seedUsersIfEmpty();
       setTickets(ticketsData);
       setDepartments(departmentsData);
       setWorkflows(workflowsData);
@@ -307,7 +305,7 @@ export default function Home() {
       const actionType = isComplete ? "completed" : "in_progress";
 
       // Add department action
-      await storage.addDepartmentAction(selectedTicketForAction.id, currentStep.stepNumber, actionType, notes, isComplete, selectedTicketForAction.assignee, assignee);
+      const updatedTicket = await storage.addDepartmentAction(selectedTicketForAction.id, currentStep.stepNumber, actionType, notes, isComplete, selectedTicketForAction.assignee, assignee);
 
       // Optionally reassign current assignee when in progress
       if (!isComplete && assignee) {
@@ -334,7 +332,7 @@ export default function Home() {
     setShowReassignmentModal(true);
   };
 
-  const handleReassigned = async () => {
+  const handleReassigned = async (_newAssignee: string) => {
     if (!selectedTicketForReassignment) return;
 
     try {
@@ -779,7 +777,7 @@ export default function Home() {
                           <SLADisplay sla={getWorkflowSLA(ticket, workflows)} />
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap">
-                          <WorkflowProgressBadge currentStep={ticket.currentWorkflowStep || 1} totalSteps={getWorkflowTotalSteps(ticket, workflows)} resolutions={workflowResolutions.get(ticket.id) || []} isFullyResolved={ticket.isFullyResolved} status={ticket.status} ticketCreatedAt={ticket.createdAt} workflowStatus={ticket.workflowStatus} />
+                          <WorkflowProgressBadge currentStep={ticket.currentWorkflowStep || 1} totalSteps={getWorkflowTotalSteps(ticket, workflows)} resolutions={workflowResolutions.get(ticket.id) || []} currentDepartment={ticket.currentDepartment} isFullyResolved={ticket.isFullyResolved} status={ticket.status} ticketCreatedAt={ticket.createdAt} workflowStatus={ticket.workflowStatus} />
                         </td>
                         <td className="px-3 py-2 text-sm whitespace-nowrap" suppressHydrationWarning>
                           {(() => {

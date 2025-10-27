@@ -519,9 +519,9 @@ export default function CreateTicketPage() {
                               </div>
 
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">Steps</span>
+                                <span className="text-sm text-gray-600">Milestones</span>
                                 <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
-                                  {totalSteps} departments
+                                  {totalSteps} milestones
                                 </Badge>
                               </div>
 

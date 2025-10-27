@@ -172,7 +172,7 @@ export function WorkflowHistoryTooltip({ resolutions, currentStep, totalSteps, c
       {sortedResolutions.length > 0 && (
         <div className="border-t border-gray-200 pt-2">
           <div className="flex items-center justify-between text-xs text-gray-600">
-            <span>Total Steps Completed: {sortedResolutions.length}</span>
+            <span>Total Milestones Completed: {sortedResolutions.length}</span>
             <span>{sortedResolutions.filter((r) => r.slaStatus === "met").length} SLA Met</span>
           </div>
         </div>
